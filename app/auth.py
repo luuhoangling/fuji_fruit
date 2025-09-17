@@ -1,0 +1,141 @@
+"""
+Authentication utilities for the Fuji e-commerce application
+"""
+import bcrypt
+import jwt
+from datetime import datetime, timedelta
+from flask import current_app, request, jsonify, session
+from functools import wraps
+from app.db import get_session, close_session
+from app.models import models
+import uuid
+
+def hash_password(password):
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def check_password(password, password_hash):
+    """Check if password matches the hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+
+def generate_access_token(user_id):
+    """Generate JWT access token"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + timedelta(seconds=current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
+
+def decode_token(token):
+    """Decode JWT token"""
+    try:
+        payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def get_current_user():
+    """Get current user from JWT token"""
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        payload = decode_token(token)
+        if payload:
+            session_db = get_session()
+            try:
+                user = session_db.query(models.Users).filter(
+                    models.Users.id == payload['user_id']
+                ).first()
+                return user
+            finally:
+                close_session(session_db)
+    return None
+
+def login_required(f):
+    """Decorator to require authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    """Decorator to require admin role"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        if user.role_code != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_cart_session():
+    """Get or create cart session ID"""
+    cart_session_id = session.get('cart_session_id')
+    if not cart_session_id:
+        cart_session_id = str(uuid.uuid4())
+        session['cart_session_id'] = cart_session_id
+    return cart_session_id
+
+def register_user(email, password, full_name, phone):
+    """Register a new user"""
+    session_db = get_session()
+    try:
+        # Check if user already exists
+        existing_user = session_db.query(models.Users).filter(
+            models.Users.email == email
+        ).first()
+        
+        if existing_user:
+            return None, "Email already registered"
+        
+        # Create new user
+        password_hash = hash_password(password)
+        user_id = str(uuid.uuid4())
+        
+        new_user = models.Users(
+            id=user_id,
+            email=email,
+            password_hash=password_hash,
+            full_name=full_name,
+            phone=phone,
+            role_code='customer',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        
+        session_db.add(new_user)
+        session_db.commit()
+        
+        return new_user, None
+        
+    except Exception as e:
+        session_db.rollback()
+        return None, str(e)
+    finally:
+        close_session(session_db)
+
+def authenticate_user(email, password):
+    """Authenticate user login"""
+    session_db = get_session()
+    try:
+        user = session_db.query(models.Users).filter(
+            models.Users.email == email
+        ).first()
+        
+        if user and check_password(password, user.password_hash):
+            return user, None
+        
+        return None, "Invalid email or password"
+        
+    except Exception as e:
+        return None, str(e)
+    finally:
+        close_session(session_db)

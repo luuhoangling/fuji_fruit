@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Lỗi máy chủ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="error-page">
+            <h1>500</h1>
+            <h2>Lỗi máy chủ nội bộ</h2>
+            <p>Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu của bạn.</p>
+            <a href="{{ url_for('public.index') }}" class="btn btn-primary">Về trang chủ</a>
+        </div>
+    </div>
+</body>
+</html>
