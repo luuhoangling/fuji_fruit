@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Thanh toán - Fuji Fruit{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('site.home') }}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('site.cart') }}">Giỏ hàng</a></li>
+            <li class="breadcrumb-item active">Thanh toán</li>
+        </ol>
+    </nav>
+
+    <h1>Thanh toán</h1>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        
+        <div class="row">
+            <!-- Customer Information -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Thông tin khách hàng</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.customer_name.label(class="form-label") }} <span class="text-danger">*</span>
+                                {{ form.customer_name(class="form-control") }}
+                                {% if form.customer_name.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.customer_name.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone.label(class="form-label") }} <span class="text-danger">*</span>
+                                {{ form.phone(class="form-control") }}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.phone.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.address.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.address(class="form-control") }}
+                            {% if form.address.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.address.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ form.ward.label(class="form-label") }} <span class="text-danger">*</span>
+                                {{ form.ward(class="form-control") }}
+                                {% if form.ward.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.ward.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.district.label(class="form-label") }} <span class="text-danger">*</span>
+                                {{ form.district(class="form-control") }}
+                                {% if form.district.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.district.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                {{ form.province.label(class="form-label") }} <span class="text-danger">*</span>
+                                {{ form.province(class="form-control") }}
+                                {% if form.province.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.province.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Phương thức thanh toán</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for value, label in form.payment_method.choices %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="payment_method" 
+                                   value="{{ value }}" id="payment_{{ value }}"
+                                   {% if form.payment_method.data == value %}checked{% endif %}>
+                            <label class="form-check-label" for="payment_{{ value }}">
+                                {% if value == 'COD' %}
+                                    <i class="bi bi-cash"></i>
+                                {% else %}
+                                    <i class="bi bi-credit-card"></i>
+                                {% endif %}
+                                {{ label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if form.payment_method.errors %}
+                            <div class="text-danger">
+                                {% for error in form.payment_method.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Đơn hàng của bạn</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Items -->
+                        <div class="order-items mb-3">
+                            {% for item in items %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">{{ item.name }}</h6>
+                                    <small class="text-muted">{{ item.unit_price | vnd }} × {{ item.qty }}</small>
+                                </div>
+                                <span class="fw-bold">{{ item.line_total | vnd }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Totals -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tạm tính:</span>
+                            <span>{{ subtotal | vnd }}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Phí vận chuyển:</span>
+                            <span id="shipping-fee">{{ shipping_fee | vnd }}</span>
+                        </div>
+                        
+                        {% if subtotal >= 300000 %}
+                        <div class="text-success mb-2">
+                            <small><i class="bi bi-check-circle"></i> Miễn phí vận chuyển</small>
+                        </div>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between mb-3">
+                            <strong>Tổng cộng:</strong>
+                            <strong class="text-primary" id="grand-total">{{ grand_total | vnd }}</strong>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Đặt hàng
+                            </button>
+                            <a href="{{ url_for('site.cart') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại giỏ hàng
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Shipping Info -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6><i class="bi bi-truck"></i> Thông tin vận chuyển</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li><small>• HN/HCM: 15.000₫</small></li>
+                            <li><small>• Tỉnh khác: 25.000₫</small></li>
+                            <li><small>• Miễn phí từ 300.000₫</small></li>
+                            <li><small>• Giao hàng 1-3 ngày</small></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const provinceInput = document.querySelector('input[name="province"]');
+    const shippingFeeElement = document.getElementById('shipping-fee');
+    const grandTotalElement = document.getElementById('grand-total');
+    const subtotal = {{ subtotal }};
+    
+    // Update shipping fee based on province
+    function updateShippingFee() {
+        const province = provinceInput.value.toLowerCase();
+        let shippingFee = 25000; // Default for other provinces
+        
+        if (province.includes('hà nội') || province.includes('tp.hcm') || province.includes('ho chi minh')) {
+            shippingFee = 15000;
+        }
+        
+        // Free shipping for orders >= 300k
+        if (subtotal >= 300000) {
+            shippingFee = 0;
+        }
+        
+        const grandTotal = subtotal + shippingFee;
+        
+        shippingFeeElement.textContent = new Intl.NumberFormat('vi-VN').format(shippingFee) + '₫';
+        grandTotalElement.textContent = new Intl.NumberFormat('vi-VN').format(grandTotal) + '₫';
+    }
+    
+    provinceInput.addEventListener('input', updateShippingFee);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('input[required], select[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+        }
+    });
+});
+</script>
+{% endblock %}

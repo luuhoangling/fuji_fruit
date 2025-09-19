@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Đơn hàng #{{ order.order_code }} - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.orders') }}">Đơn hàng</a></li>
+            <li class="breadcrumb-item active">#{{ order.order_code }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Đơn hàng #{{ order.order_code }}</h1>
+        <div>
+            <span class="badge bg-{{ 'success' if order.status == 'fulfilled' else 'warning' if order.status == 'confirmed' else 'primary' if order.status == 'pending' else 'danger' }} fs-6">
+                {% if order.status == 'pending' %}Chờ xác nhận
+                {% elif order.status == 'confirmed' %}Đã xác nhận
+                {% elif order.status == 'fulfilled' %}Đã giao
+                {% elif order.status == 'cancelled' %}Đã hủy
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Order Details -->
+        <div class="col-lg-8">
+            <!-- Customer Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Thông tin khách hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Thông tin liên hệ:</h6>
+                            <p class="mb-1"><strong>{{ order.customer_name }}</strong></p>
+                            <p class="mb-1">{{ order.customer_phone }}</p>
+                            <p class="mb-0">{{ order.shipping_address }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Thông tin đơn hàng:</h6>
+                            <p class="mb-1">Ngày đặt: {{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p class="mb-1">Thanh toán: 
+                                {% if order.payment_method == 'COD' %}
+                                    Khi nhận hàng
+                                {% else %}
+                                    Chuyển khoản
+                                {% endif %}
+                            </p>
+                            <p class="mb-0">Trạng thái thanh toán: 
+                                <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'warning' }}">
+                                    {% if order.payment_status == 'paid' %}Đã thanh toán
+                                    {% else %}Chưa thanh toán
+                                    {% endif %}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Sản phẩm đã đặt</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Đơn giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ item.product.image_url or '/static/img/no-image.jpg' }}" 
+                                                 class="img-thumbnail me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                            <div>
+                                                <h6 class="mb-0">{{ item.product.name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle">{{ item.unit_price | vnd }}</td>
+                                    <td class="align-middle">{{ item.qty }}</td>
+                                    <td class="align-middle">{{ (item.unit_price * item.qty) | vnd }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Lịch sử đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for event in timeline %}
+                        <div class="timeline-item d-flex mb-3">
+                            <div class="timeline-marker">
+                                <i class="bi bi-{{ 'check-circle-fill text-success' if event.type in ['fulfilled', 'confirmed', 'paid'] else 'clock text-warning' if event.type == 'pending' else 'x-circle text-danger' if event.type == 'cancelled' else 'circle text-primary' }}"></i>
+                            </div>
+                            <div class="timeline-content ms-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">
+                                        {% if event.type == 'pending' %}Đặt hàng
+                                        {% elif event.type == 'confirmed' %}Đã xác nhận
+                                        {% elif event.type == 'fulfilled' %}Đã giao hàng
+                                        {% elif event.type == 'cancelled' %}Đã hủy
+                                        {% elif event.type == 'mock_paid' %}Đã thanh toán (chuyển khoản)
+                                        {% elif event.type == 'restored_stock' %}Đã hoàn kho
+                                        {% else %}{{ event.type }}
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                {% if event.note %}
+                                <p class="mb-0 text-muted">{{ event.note }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Sidebar -->
+        <div class="col-lg-4">
+            <!-- Order Summary -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Tổng kết đơn hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tạm tính:</span>
+                        <span>{{ order.subtotal | vnd }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Phí vận chuyển:</span>
+                        <span>{{ order.shipping_fee | vnd }}</span>
+                    </div>
+                    
+                    {% if order.discount > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Giảm giá:</span>
+                        <span>-{{ order.discount | vnd }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Tổng cộng:</strong>
+                        <strong class="text-primary">{{ order.grand_total | vnd }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Cập nhật trạng thái</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.order_update_status', id=order.id) }}">
+                        {{ status_form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ status_form.status.label(class="form-label") }}
+                            {{ status_form.status(class="form-select") }}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            <i class="bi bi-arrow-repeat"></i> Cập nhật trạng thái
+                        </button>
+                    </form>
+
+                    <!-- Mock Payment (if applicable) -->
+                    {% if order.payment_method == 'MOCK_TRANSFER' and order.payment_status == 'unpaid' %}
+                    <form method="POST" action="{{ url_for('admin.order_mock_pay', id=order.id) }}">
+                        {{ csrf_token() }}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-credit-card"></i> Xác nhận thanh toán
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.orders') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+                        </a>
+                        <a href="{{ url_for('site.order_detail', order_code=order.order_code) }}" class="btn btn-outline-info">
+                            <i class="bi bi-eye"></i> Xem trang khách hàng
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline-item {
+    position: relative;
+}
+
+.timeline-marker {
+    min-width: 20px;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-item:not(:last-child) .timeline-content::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 30px;
+    bottom: -20px;
+    width: 2px;
+    background-color: #dee2e6;
+}
+</style>
+{% endblock %}

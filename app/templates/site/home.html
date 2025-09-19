@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Fuji Fruit - Trái cây tươi ngon{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Hero Section -->
+    <div class="row bg-light py-5 mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-4 text-success">Fuji Fruit</h1>
+            <p class="lead">Trái cây tươi ngon, chất lượng cao, giao hàng tận nơi</p>
+        </div>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="container mb-5">
+        <h2 class="mb-4">Danh mục sản phẩm</h2>
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card category-card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <a href="{{ url_for('site.category', slug=category.slug) }}" 
+                           class="btn btn-outline-success">Xem sản phẩm</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- New Products Section -->
+    <div class="container mb-5">
+        <h2 class="mb-4">Sản phẩm mới</h2>
+        <div class="row">
+            {% for product in new_products %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                {% include '_partials/product_card.html' %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if new_products|length == 0 %}
+        <div class="text-center text-muted">
+            <p>Chưa có sản phẩm mới</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sale Products Section -->
+    {% if sale_products %}
+    <div class="container mb-5">
+        <h2 class="mb-4 text-danger">
+            <i class="bi bi-fire"></i> Đang giảm giá
+        </h2>
+        <div class="row">
+            {% for product in sale_products %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                {% include '_partials/product_card.html' %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add to cart functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+    
+    addToCartBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            
+            fetch('/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    qty: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count in navbar
+                    const cartBadge = document.querySelector('.navbar .badge');
+                    if (cartBadge) {
+                        cartBadge.textContent = data.cart_count;
+                    } else if (data.cart_count > 0) {
+                        const cartLink = document.querySelector('.navbar a[href*="cart"]');
+                        cartLink.innerHTML += ` <span class="badge bg-danger">${data.cart_count}</span>`;
+                    }
+                    
+                    // Show success message
+                    alert(data.message);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

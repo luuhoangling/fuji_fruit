@@ -1,14 +1,15 @@
+"""Flask application factory"""
+
 from flask import Flask
+from app.extensions import init_extensions
 from config import get_config
-from app.db import init_db
-from app.models import models
-import logging
 import os
 
+
 def create_app(config_name=None):
-    """Application factory function"""
+    """Create and configure Flask application"""
     
-    # Determine config name
+    # Determine config
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'default')
     
@@ -19,35 +20,41 @@ def create_app(config_name=None):
     config_class = get_config(config_name)
     app.config.from_object(config_class)
     
-    # Setup logging
-    if not app.debug:
-        logging.basicConfig(level=logging.INFO)
+    # Initialize extensions
+    init_extensions(app)
     
-    # Initialize database
-    try:
-        with app.app_context():
-            init_db(app)
-            models.init_models()
-    except Exception as e:
-        app.logger.error(f"Failed to initialize database: {str(e)}")
-        # In development, we might want to continue without DB for testing
-        if config_name == 'development':
-            app.logger.warning("Continuing without database connection in development mode")
-        else:
-            raise
+    # Initialize custom database
+    from app.db import init_db
+    init_db(app)
     
-    # Register blueprints
-    from app.blueprints.public import bp as public_bp
-    from app.blueprints.api import bp as api_bp
+    # Register Jinja filters
+    @app.template_filter('vnd')
+    def format_vnd(amount):
+        """Format number as Vietnamese Dong currency"""
+        if amount is None:
+            return "0₫"
+        return f"{int(amount):,}₫".replace(',', '.')
     
-    app.register_blueprint(public_bp)
-    app.register_blueprint(api_bp, url_prefix='/api')
+    # Import and register blueprints
+    from app.api import api_bp, admin_bp
+    app.register_blueprint(api_bp)
+    app.register_blueprint(admin_bp)
     
-    # Add a simple root route that redirects to public blueprint
-    @app.route('/')
-    def index():
-        from flask import redirect, url_for
-        return redirect(url_for('public.index'))
+    # Import and register frontend blueprints
+    from app.blueprints.site.views import site_bp
+    from app.blueprints.admin.views import admin_bp as admin_frontend_bp
+    app.register_blueprint(site_bp)
+    app.register_blueprint(admin_frontend_bp, url_prefix='/admin')
+    
+    # Register error handlers
+    from app.api.errors import register_error_handlers
+    register_error_handlers(app)
+    
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy'}, 200
+    
+    return app
     
     # Error handlers
     @app.errorhandler(404)

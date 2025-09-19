@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from flask import current_app, request, jsonify, session
 from functools import wraps
 from app.db import get_session, close_session
-from app.models import models
+from app.models.user import User
 import uuid
 
 def hash_password(password):
@@ -46,8 +46,8 @@ def get_current_user():
         if payload:
             session_db = get_session()
             try:
-                user = session_db.query(models.Users).filter(
-                    models.Users.id == payload['user_id']
+                user = session_db.query(User).filter(
+                    User.id == payload['user_id']
                 ).first()
                 return user
             finally:
@@ -89,8 +89,8 @@ def register_user(email, password, full_name, phone):
     session_db = get_session()
     try:
         # Check if user already exists
-        existing_user = session_db.query(models.Users).filter(
-            models.Users.email == email
+        existing_user = session_db.query(User).filter(
+            User.email == email
         ).first()
         
         if existing_user:
@@ -100,7 +100,8 @@ def register_user(email, password, full_name, phone):
         password_hash = hash_password(password)
         user_id = str(uuid.uuid4())
         
-        new_user = models.Users(
+        # Create new user
+        new_user = User(
             id=user_id,
             email=email,
             password_hash=password_hash,
@@ -126,8 +127,8 @@ def authenticate_user(email, password):
     """Authenticate user login"""
     session_db = get_session()
     try:
-        user = session_db.query(models.Users).filter(
-            models.Users.email == email
+        user = session_db.query(User).filter(
+            User.email == email
         ).first()
         
         if user and check_password(password, user.password_hash):

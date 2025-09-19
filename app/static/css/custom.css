@@ -1,0 +1,266 @@
+/* Custom CSS for Fuji Fruit */
+
+/* Product Cards */
+.product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.product-card .card-img-top {
+    transition: transform 0.2s;
+}
+
+.product-card:hover .card-img-top {
+    transform: scale(1.02);
+}
+
+/* Category Cards */
+.category-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.category-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Rating Stars */
+.rating-stars .bi-star,
+.rating-stars .bi-star-fill,
+.rating-stars .bi-star-half {
+    font-size: 1rem;
+}
+
+/* Admin Layout */
+.admin-sidebar {
+    height: 100vh;
+    position: sticky;
+    top: 0;
+}
+
+/* Timeline Styles */
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 20px;
+    bottom: -20px;
+    width: 2px;
+    background-color: #dee2e6;
+}
+
+/* Form Enhancements */
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not(:placeholder-shown) ~ label {
+    opacity: 0.65;
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+}
+
+/* Price Display */
+.price-section .h3,
+.price-section .h5,
+.price-section .h6 {
+    margin-bottom: 0;
+}
+
+/* Cart Quantity Controls */
+.qty-controls .form-control {
+    text-align: center;
+}
+
+.qty-controls .btn {
+    min-width: 35px;
+}
+
+/* Stock Status */
+.stock-status .badge {
+    font-size: 0.875rem;
+}
+
+/* Admin Stats Cards */
+.admin-stats .card {
+    border: none;
+    border-radius: 10px;
+}
+
+/* Alert Enhancements */
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+/* Button Enhancements */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+}
+
+/* Navigation */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Loading States */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Image Thumbnails */
+.img-thumbnail {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+/* Search and Filter Forms */
+.filter-form .form-control,
+.filter-form .form-select {
+    border-radius: 6px;
+}
+
+/* Table Enhancements */
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-responsive {
+    border-radius: 8px;
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: 500;
+}
+
+/* Card Enhancements */
+.card {
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-weight: 600;
+}
+
+/* Pagination Enhancements */
+.pagination .page-link {
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    border-radius: 6px;
+    margin: 0 2px;
+}
+
+.pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Utilities */
+.text-decoration-line-through {
+    text-decoration: line-through !important;
+}
+
+.opacity-75 {
+    opacity: 0.75 !important;
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    .card {
+        background-color: #343a40;
+        border-color: #495057;
+    }
+    
+    .card-header {
+        background-color: #495057;
+        border-color: #6c757d;
+    }
+}

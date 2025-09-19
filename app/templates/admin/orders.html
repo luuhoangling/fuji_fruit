@@ -1,0 +1,139 @@
+{% extends "admin/dashboard.html" %}
+
+{% block title %}Quản lý đơn hàng - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Quản trị</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('admin.dashboard') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-speedometer2"></i> Bảng điều khiển
+                    </a>
+                    <a href="{{ url_for('admin.products') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-box"></i> Sản phẩm
+                    </a>
+                    <a href="{{ url_for('admin.categories') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-folder"></i> Danh mục
+                    </a>
+                    <a href="{{ url_for('admin.orders') }}" class="list-group-item list-group-item-action active">
+                        <i class="bi bi-receipt"></i> Đơn hàng
+                    </a>
+                    <a href="{{ url_for('admin.reviews') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-star"></i> Đánh giá
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10">
+            <h1>Quản lý đơn hàng</h1>
+
+            <!-- Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <form method="GET">
+                                <select name="status" class="form-select" onchange="this.form.submit()">
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Chờ xác nhận</option>
+                                    <option value="confirmed" {% if status == 'confirmed' %}selected{% endif %}>Đã xác nhận</option>
+                                    <option value="fulfilled" {% if status == 'fulfilled' %}selected{% endif %}>Đã giao</option>
+                                    <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+                                </select>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="card">
+                <div class="card-body">
+                    {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Mã đơn</th>
+                                    <th>Khách hàng</th>
+                                    <th>Ngày đặt</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Thanh toán</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ order.order_code }}</strong>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ order.customer_name }}</strong><br>
+                                            <small class="text-muted">{{ order.customer_phone }}</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>{{ order.grand_total | vnd }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'warning' }}">
+                                            {% if order.payment_status == 'paid' %}Đã thanh toán
+                                            {% else %}Chưa thanh toán
+                                            {% endif %}
+                                        </span><br>
+                                        <small class="text-muted">
+                                            {% if order.payment_method == 'COD' %}COD
+                                            {% else %}Chuyển khoản
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if order.status == 'fulfilled' else 'warning' if order.status == 'confirmed' else 'primary' if order.status == 'pending' else 'danger' }}">
+                                            {% if order.status == 'pending' %}Chờ xác nhận
+                                            {% elif order.status == 'confirmed' %}Đã xác nhận
+                                            {% elif order.status == 'fulfilled' %}Đã giao
+                                            {% elif order.status == 'cancelled' %}Đã hủy
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('admin.order_detail', id=order.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Xem
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if total > per_page %}
+                    <div class="mt-4">
+                        {% include '_partials/pagination.html' %}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-receipt display-1 text-muted"></i>
+                        <h3 class="mt-3">Chưa có đơn hàng</h3>
+                        <p class="text-muted">Đơn hàng sẽ xuất hiện ở đây khi khách hàng đặt mua</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

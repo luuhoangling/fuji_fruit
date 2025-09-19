@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Thêm sản phẩm' if action == 'new' else 'Sửa sản phẩm' }} - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.products') }}">Sản phẩm</a></li>
+            <li class="breadcrumb-item active">{{ 'Thêm mới' if action == 'new' else 'Chỉnh sửa' }}</li>
+        </ol>
+    </nav>
+
+    <h1>{{ 'Thêm sản phẩm mới' if action == 'new' else 'Chỉnh sửa sản phẩm' }}</h1>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        
+        <div class="row">
+            <!-- Main Info -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Thông tin cơ bản</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.slug.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.slug(class="form-control") }}
+                            <small class="form-text text-muted">URL thân thiện (không dấu, viết thường)</small>
+                            {% if form.slug.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.slug.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.short_desc.label(class="form-label") }}
+                            {{ form.short_desc(class="form-control") }}
+                            {% if form.short_desc.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.short_desc.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.image_url.label(class="form-label") }}
+                            {{ form.image_url(class="form-control") }}
+                            {% if form.image_url.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.image_url.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Giá bán</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.price.label(class="form-label") }} <span class="text-danger">*</span>
+                                <div class="input-group">
+                                    {{ form.price(class="form-control") }}
+                                    <span class="input-group-text">₫</span>
+                                </div>
+                                {% if form.price.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.price.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.sale_price.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.sale_price(class="form-control") }}
+                                    <span class="input-group-text">₫</span>
+                                </div>
+                                {% if form.sale_price.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.sale_price.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.sale_start.label(class="form-label") }}
+                                {{ form.sale_start(class="form-control") }}
+                                {% if form.sale_start.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.sale_start.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.sale_end.label(class="form-label") }}
+                                {{ form.sale_end(class="form-control") }}
+                                {% if form.sale_end.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.sale_end.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Cài đặt</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check"></i> {{ 'Tạo sản phẩm' if action == 'new' else 'Cập nhật sản phẩm' }}
+                            </button>
+                            <a href="{{ url_for('admin.products') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-generate slug from name
+    const nameInput = document.querySelector('input[name="name"]');
+    const slugInput = document.querySelector('input[name="slug"]');
+    
+    if (nameInput && slugInput && !slugInput.value) {
+        nameInput.addEventListener('input', function() {
+            const slug = this.value
+                .toLowerCase()
+                .replace(/[áàảãạâấầẩẫậăắằẳẵặ]/g, 'a')
+                .replace(/[éèẻẽẹêếềểễệ]/g, 'e')
+                .replace(/[íìỉĩị]/g, 'i')
+                .replace(/[óòỏõọôốồổỗộơớờởỡợ]/g, 'o')
+                .replace(/[úùủũụưứừửữự]/g, 'u')
+                .replace(/[ýỳỷỹỵ]/g, 'y')
+                .replace(/đ/g, 'd')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            
+            slugInput.value = slug;
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Fuji Fruit{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('site.home') }}">Trang chủ</a></li>
+            <li class="breadcrumb-item active">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Product Detail -->
+    <div class="row">
+        <!-- Product Images -->
+        <div class="col-md-6">
+            <div class="product-images">
+                <img src="{{ product.image_url or '/static/img/no-image.jpg' }}" 
+                     class="img-fluid rounded main-image" alt="{{ product.name }}">
+                
+                {% if product.images %}
+                <div class="row mt-3">
+                    {% for image in product.images %}
+                    <div class="col-3">
+                        <img src="{{ image }}" class="img-fluid rounded thumbnail" 
+                             alt="{{ product.name }}" onclick="changeMainImage(this.src)">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-md-6">
+            <h1>{{ product.name }}</h1>
+            
+            <!-- Price -->
+            <div class="price-section mb-3">
+                <span class="h3 text-primary fw-bold">{{ product.price | vnd }}</span>
+                {% if product.original_price and product.original_price > product.price %}
+                    <span class="h5 text-muted text-decoration-line-through ms-3">
+                        {{ product.original_price | vnd }}
+                    </span>
+                    <span class="badge bg-danger ms-2">
+                        -{{ (((product.original_price - product.price) / product.original_price) * 100) | round | int }}%
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- Stock Status -->
+            <div class="stock-status mb-3">
+                {% if product.stock.in_stock %}
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-check-circle"></i> Còn hàng
+                    </span>
+                    {% if product.stock.qty %}
+                        <small class="text-muted ms-2">{{ product.stock.qty }} sản phẩm có sẵn</small>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-secondary fs-6">
+                        <i class="bi bi-x-circle"></i> Hết hàng
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- Rating -->
+            {% if product.rating %}
+            <div class="rating-section mb-3">
+                {% include '_partials/rating_stars.html' %}
+                <span class="ms-2">({{ product.rating.count }} đánh giá)</span>
+            </div>
+            {% endif %}
+
+            <!-- Description -->
+            {% if product.short_desc %}
+            <div class="description mb-4">
+                <h6>Mô tả:</h6>
+                <p>{{ product.short_desc }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Add to Cart -->
+            {% if product.stock.in_stock %}
+            <div class="add-to-cart-section">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <input type="number" id="quantity" class="form-control" value="1" min="1" max="10">
+                    </div>
+                    <div class="col-md-8">
+                        <button class="btn btn-primary btn-lg w-100" id="addToCartBtn" 
+                                data-product-id="{{ product.id }}">
+                            <i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="add-to-cart-section">
+                <button class="btn btn-secondary btn-lg w-100" disabled>
+                    <i class="bi bi-x-circle"></i> Hết hàng
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <div class="row mt-5" id="reviews">
+        <div class="col-12">
+            {% include 'site/reviews_section.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Change main image
+function changeMainImage(src) {
+    document.querySelector('.main-image').src = src;
+}
+
+// Add to cart functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    const quantityInput = document.getElementById('quantity');
+    
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const qty = parseInt(quantityInput.value);
+            
+            fetch('/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    qty: qty
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count in navbar
+                    const cartBadge = document.querySelector('.navbar .badge');
+                    if (cartBadge) {
+                        cartBadge.textContent = data.cart_count;
+                    } else if (data.cart_count > 0) {
+                        const cartLink = document.querySelector('.navbar a[href*="cart"]');
+                        cartLink.innerHTML += ` <span class="badge bg-danger">${data.cart_count}</span>`;
+                    }
+                    
+                    // Show success message
+                    alert(data.message);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

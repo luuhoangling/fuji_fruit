@@ -1,3 +1,0 @@
-<!-- Placeholder for hero-image.jpg -->
-<!-- This is a text file as a placeholder. Replace with actual image. -->
-Hero image placeholder - Please add hero-image.jpg to this directory.

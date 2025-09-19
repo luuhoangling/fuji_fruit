@@ -43,6 +43,10 @@ def get_session():
         raise RuntimeError("Database not initialized. Call init_db() first.")
     return Session()
 
+def get_db_session():
+    """Get a new database session (alias for get_session)"""
+    return get_session()
+
 def close_session(session):
     """Close a database session"""
     try:
