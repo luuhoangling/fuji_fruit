@@ -15,7 +15,7 @@
 
     <h1>Thanh toán</h1>
 
-    <form method="POST">
+    <form method="POST" data-logged-in="{% if session.user_id %}true{% else %}false{% endif %}">
         {{ form.hidden_tag() }}
         
         <div class="row">
@@ -24,6 +24,12 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Thông tin khách hàng</h5>
+                        {% if session.user_id %}
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Thông tin đã được điền sẵn từ tài khoản của bạn. Bạn có thể chỉnh sửa nếu cần.
+                        </small>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -170,7 +176,7 @@
                             <span id="shipping-fee">{{ shipping_fee | vnd }}</span>
                         </div>
                         
-                        {% if subtotal >= 300000 %}
+                        {% if subtotal >= 500000 %}
                         <div class="text-success mb-2">
                             <small><i class="bi bi-check-circle"></i> Miễn phí vận chuyển</small>
                         </div>
@@ -199,9 +205,10 @@
                     <div class="card-body">
                         <h6><i class="bi bi-truck"></i> Thông tin vận chuyển</h6>
                         <ul class="list-unstyled mb-0">
-                            <li><small>• HN/HCM: 15.000₫</small></li>
-                            <li><small>• Tỉnh khác: 25.000₫</small></li>
-                            <li><small>• Miễn phí từ 300.000₫</small></li>
+                            <li><small>• HN/HCM: 25.000₫</small></li>
+                            <li><small>• Đà Nẵng/Hải Phòng: 30.000₫</small></li>
+                            <li><small>• Cần Thơ: 35.000₫</small></li>
+                            <li><small>• Miễn phí từ 500.000₫</small></li>
                             <li><small>• Giao hàng 1-3 ngày</small></li>
                         </ul>
                     </div>
@@ -219,18 +226,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const shippingFeeElement = document.getElementById('shipping-fee');
     const grandTotalElement = document.getElementById('grand-total');
     const subtotal = {{ subtotal }};
+    const form = document.querySelector('form');
+    
+    // Check if user is logged in from data attribute
+    const isLoggedIn = form.getAttribute('data-logged-in') === 'true';
+    
+    // Highlight pre-filled fields for user awareness
+    if (isLoggedIn) {
+        const customerNameField = document.querySelector('input[name="customer_name"]');
+        const phoneField = document.querySelector('input[name="phone"]');
+        
+        // Add subtle visual indication for pre-filled fields
+        if (customerNameField && customerNameField.value.trim()) {
+            customerNameField.classList.add('border-primary');
+            customerNameField.style.backgroundColor = '#f8f9ff';
+        }
+        
+        if (phoneField && phoneField.value.trim()) {
+            phoneField.classList.add('border-primary');
+            phoneField.style.backgroundColor = '#f8f9ff';
+        }
+        
+        // Remove visual indication when user starts typing
+        [customerNameField, phoneField].forEach(field => {
+            if (field) {
+                field.addEventListener('input', function() {
+                    this.classList.remove('border-primary');
+                    this.style.backgroundColor = '';
+                });
+            }
+        });
+    }
     
     // Update shipping fee based on province
     function updateShippingFee() {
-        const province = provinceInput.value.toLowerCase();
-        let shippingFee = 25000; // Default for other provinces
+        const province = provinceInput.value;
+        let shippingFee = 30000; // Default shipping fee
         
-        if (province.includes('hà nội') || province.includes('tp.hcm') || province.includes('ho chi minh')) {
-            shippingFee = 15000;
+        // Province-specific shipping fees (matching ShippingService)
+        const provinceFees = {
+            'Hà Nội': 25000,
+            'TP Hồ Chí Minh': 25000,
+            'Đà Nẵng': 30000,
+            'Hải Phòng': 30000,
+            'Cần Thơ': 35000
+        };
+        
+        if (province && provinceFees[province]) {
+            shippingFee = provinceFees[province];
         }
         
-        // Free shipping for orders >= 300k
-        if (subtotal >= 300000) {
+        // Free shipping for orders >= 500k (matching ShippingService)
+        if (subtotal >= 500000) {
             shippingFee = 0;
         }
         
@@ -242,8 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     provinceInput.addEventListener('input', updateShippingFee);
     
-    // Form validation
-    const form = document.querySelector('form');
+    // Form validation (reuse form variable from above)
     form.addEventListener('submit', function(e) {
         const requiredFields = form.querySelectorAll('input[required], select[required]');
         let isValid = true;

@@ -433,7 +433,7 @@ def order_mock_pay(id):
             return redirect(url_for('admin.orders'))
         
         try:
-            order_service.process_mock_payment(id)
+            order_service.mock_pay(order.order_code)
             flash('Đã xử lý thanh toán thành công', 'success')
         except Exception as e:
             flash('Có lỗi xảy ra khi xử lý thanh toán', 'error')

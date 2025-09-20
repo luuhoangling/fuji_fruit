@@ -36,8 +36,8 @@
                         <div class="col-md-6">
                             <h6>Thông tin khách hàng:</h6>
                             <p class="mb-1"><strong>{{ order.customer_name }}</strong></p>
-                            <p class="mb-1">{{ order.customer_phone }}</p>
-                            <p class="mb-0">{{ order.shipping_address }}</p>
+                            <p class="mb-1">{{ order.phone }}</p>
+                            <p class="mb-0">{{ order.address }}</p>
                         </div>
                         <div class="col-md-6">
                             <h6>Thông tin đơn hàng:</h6>
@@ -50,8 +50,8 @@
                                 {% endif %}
                             </p>
                             <p class="mb-0">Trạng thái thanh toán: 
-                                <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'warning' }}">
-                                    {% if order.payment_status == 'paid' %}Đã thanh toán
+                                <span class="badge bg-{{ 'success' if order.payment_status == 'mock_paid' else 'warning' }}">
+                                    {% if order.payment_status == 'mock_paid' %}Đã thanh toán
                                     {% else %}Chưa thanh toán
                                     {% endif %}
                                 </span>
@@ -82,16 +82,23 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img src="{{ item.product.image_url or '/static/img/no-image.jpg' }}" 
-                                                 class="img-thumbnail me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% if item.product and item.product.image_url %}
+                                                <img src="{{ item.product.image_url }}" 
+                                                     class="img-thumbnail me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                                     style="width: 50px; height: 50px; font-size: 0.8rem; color: #6c757d;">
+                                                    No Image
+                                                </div>
+                                            {% endif %}
                                             <div>
-                                                <h6 class="mb-0">{{ item.product.name }}</h6>
+                                                <h6 class="mb-0">{{ item.product_name }}</h6>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="align-middle">{{ item.unit_price | vnd }}</td>
+                                    <td class="align-middle">{{ "{:,.0f}".format(item.unit_price) }} đ</td>
                                     <td class="align-middle">{{ item.qty }}</td>
-                                    <td class="align-middle">{{ (item.unit_price * item.qty) | vnd }}</td>
+                                    <td class="align-middle">{{ "{:,.0f}".format(item.line_total) }} đ</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -110,18 +117,18 @@
                         {% for event in timeline %}
                         <div class="timeline-item d-flex mb-3">
                             <div class="timeline-marker">
-                                <i class="bi bi-{{ 'check-circle-fill text-success' if event.type in ['fulfilled', 'confirmed', 'paid'] else 'clock text-warning' if event.type == 'pending' else 'x-circle text-danger' if event.type == 'cancelled' else 'circle text-primary' }}"></i>
+                                <i class="bi bi-{{ 'check-circle-fill text-success' if event.event_type in ['fulfilled', 'confirmed', 'mock_paid'] else 'clock text-warning' if event.event_type == 'placed' else 'x-circle text-danger' if event.event_type == 'cancelled' else 'arrow-repeat text-info' if event.event_type == 'restocked' else 'circle text-primary' }}"></i>
                             </div>
                             <div class="timeline-content ms-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-1">
-                                        {% if event.type == 'pending' %}Đặt hàng
-                                        {% elif event.type == 'confirmed' %}Đã xác nhận
-                                        {% elif event.type == 'fulfilled' %}Đã giao hàng
-                                        {% elif event.type == 'cancelled' %}Đã hủy
-                                        {% elif event.type == 'mock_paid' %}Đã thanh toán (chuyển khoản)
-                                        {% elif event.type == 'restored_stock' %}Đã hoàn kho
-                                        {% else %}{{ event.type }}
+                                        {% if event.event_type == 'placed' %}Đặt hàng
+                                        {% elif event.event_type == 'confirmed' %}Đã xác nhận
+                                        {% elif event.event_type == 'fulfilled' %}Đã giao hàng
+                                        {% elif event.event_type == 'cancelled' %}Đã hủy
+                                        {% elif event.event_type == 'mock_paid' %}Đã thanh toán (chuyển khoản)
+                                        {% elif event.event_type == 'restocked' %}Đã hoàn kho
+                                        {% else %}{{ event.event_type }}
                                         {% endif %}
                                     </h6>
                                     <small class="text-muted">{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
@@ -146,18 +153,18 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Tạm tính:</span>
-                        <span>{{ order.subtotal | vnd }}</span>
+                        <span>{{ "{:,.0f}".format(order.subtotal if order.subtotal else 0) }} đ</span>
                     </div>
                     
                     <div class="d-flex justify-content-between mb-2">
                         <span>Phí vận chuyển:</span>
-                        <span>{{ order.shipping_fee | vnd }}</span>
+                        <span>{{ "{:,.0f}".format(order.shipping_fee) }} đ</span>
                     </div>
                     
-                    {% if order.discount > 0 %}
+                    {% if order.discount_amt > 0 %}
                     <div class="d-flex justify-content-between mb-2 text-success">
                         <span>Giảm giá:</span>
-                        <span>-{{ order.discount | vnd }}</span>
+                        <span>-{{ "{:,.0f}".format(order.discount_amt) }} đ</span>
                     </div>
                     {% endif %}
                     
@@ -165,15 +172,24 @@
                     
                     <div class="d-flex justify-content-between mb-3">
                         <strong>Tổng cộng:</strong>
-                        <strong class="text-primary">{{ order.grand_total | vnd }}</strong>
+                        <strong class="text-primary">{{ "{:,.0f}".format(order.grand_total) }} đ</strong>
                     </div>
                     
+                    <!-- Cancel Order Button -->
+                    {% if order.status in ['pending', 'confirmed'] %}
+                    <div class="d-grid mb-3">
+                        <button type="button" class="btn btn-outline-danger" onclick="showCancelModal()">
+                            <i class="bi bi-x-circle"></i> Hủy đơn hàng
+                        </button>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Mock Payment Button -->
-                    {% if order.payment_method == 'MOCK_TRANSFER' and order.payment_status == 'unpaid' %}
+                    {% if order.payment_method == 'MOCK_TRANSFER' and order.payment_status == 'unpaid' and order.status != 'cancelled' %}
                     <div class="d-grid mb-3">
                         <form method="POST" action="{{ url_for('site.mock_pay', order_code=order.order_code) }}">
-                            {{ csrf_token() }}
-                            <button type="submit" class="btn btn-success w-100">
+                            <button type="submit" class="btn btn-success w-100"
+                                    onclick="return confirm('Xác nhận rằng bạn đã chuyển khoản?')">
                                 <i class="bi bi-credit-card"></i> Tôi đã chuyển khoản
                             </button>
                         </form>
@@ -199,6 +215,43 @@
         </div>
     </div>
 </div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hủy đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('site.cancel_order_view', order_code=order.order_code) }}">
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn hủy đơn hàng <strong>#{{ order.order_code }}</strong> không?</p>
+                    <div class="mb-3">
+                        <label for="cancelNote" class="form-label">Lý do hủy (tùy chọn):</label>
+                        <textarea class="form-control" id="cancelNote" name="note" rows="3" 
+                                  placeholder="Nhập lý do hủy đơn hàng..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Lưu ý:</strong> Sau khi hủy, đơn hàng sẽ không thể khôi phục và số lượng sản phẩm sẽ được hoàn lại kho.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCancelModal() {
+    const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+    modal.show();
+}
+</script>
 {% endblock %}
 
 {% block extra_css %}

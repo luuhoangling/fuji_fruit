@@ -1,7 +1,7 @@
 """Order related models"""
 
 from app.extensions import db
-from app.models import BaseModel
+from datetime import datetime
 from enum import Enum
 
 
@@ -31,10 +31,12 @@ class EventType(Enum):
     RESTOCKED = 'restocked'
 
 
-class Order(BaseModel):
+class Order(db.Model):
     """Order model"""
     __tablename__ = 'orders'
     
+    # Define columns exactly matching database schema
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_code = db.Column(db.String(20), unique=True, nullable=False)
     customer_name = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(30), nullable=False)
@@ -43,9 +45,12 @@ class Order(BaseModel):
     district = db.Column(db.String(100), nullable=True)
     ward = db.Column(db.String(100), nullable=True)
     
-    payment_method = db.Column(db.Enum(PaymentMethod), default=PaymentMethod.COD, nullable=False)
-    payment_status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.UNPAID, nullable=False)
-    status = db.Column(db.Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
+    payment_method = db.Column(db.String(20), default='COD', nullable=False)
+    payment_status = db.Column(db.String(20), default='unpaid', nullable=False)
+    status = db.Column(db.String(20), default='pending', nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # Note: No updated_at column in database schema
     
     # Financial fields
     subtotal = db.Column(db.Numeric(12, 2), nullable=True)
@@ -72,9 +77,9 @@ class Order(BaseModel):
             'province': self.province,
             'district': self.district,
             'ward': self.ward,
-            'payment_method': self.payment_method.value,
-            'payment_status': self.payment_status.value,
-            'status': self.status.value,
+            'payment_method': self.payment_method,  # Already string now
+            'payment_status': self.payment_status,  # Already string now
+            'status': self.status,  # Already string now
             'amounts': {
                 'subtotal': float(self.subtotal) if self.subtotal else None,
                 'shipping_fee': float(self.shipping_fee),
@@ -91,16 +96,19 @@ class Order(BaseModel):
         return result
 
 
-class OrderItem(BaseModel):
+class OrderItem(db.Model):
     """Order item model"""
     __tablename__ = 'order_items'
     
+    # Define columns explicitly to match database schema  
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_id = db.Column(db.BigInteger, db.ForeignKey('orders.id'), nullable=False)
     product_id = db.Column(db.BigInteger, db.ForeignKey('products.id'), nullable=False)
     product_name = db.Column(db.String(255), nullable=False)
     unit_price = db.Column(db.Numeric(12, 2), nullable=False)
     qty = db.Column(db.Integer, nullable=False)
     line_total = db.Column(db.Numeric(12, 2), nullable=False)
+    # Note: No created_at or updated_at columns to match database schema
     
     # Relationship to product (for reference)
     product = db.relationship('Product', backref='order_items')
@@ -116,18 +124,22 @@ class OrderItem(BaseModel):
         }
 
 
-class OrderEvent(BaseModel):
+class OrderEvent(db.Model):
     """Order event model for timeline tracking"""
     __tablename__ = 'order_events'
     
+    # Define columns exactly matching database schema
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_id = db.Column(db.BigInteger, db.ForeignKey('orders.id'), nullable=False)
-    event_type = db.Column(db.Enum(EventType), nullable=False)
+    event_type = db.Column(db.String(20), nullable=False)  # String instead of Enum
     note = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # Note: No updated_at column to match database schema
     
     def to_dict(self):
         return {
             'id': self.id,
-            'event_type': self.event_type.value,
+            'event_type': self.event_type,  # Already string
             'note': self.note,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

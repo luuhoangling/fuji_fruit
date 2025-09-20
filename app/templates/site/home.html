@@ -5,64 +5,148 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Hero Section -->
-    <div class="row bg-light py-5 mb-4">
-        <div class="col-12 text-center">
-            <h1 class="display-4 text-success">Fuji Fruit</h1>
-            <p class="lead">Trái cây tươi ngon, chất lượng cao, giao hàng tận nơi</p>
-        </div>
-    </div>
-
-    <!-- Categories Section -->
-    <div class="container mb-5">
-        <h2 class="mb-4">Danh mục sản phẩm</h2>
-        <div class="row">
-            {% for category in categories %}
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card category-card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ category.name }}</h5>
-                        <a href="{{ url_for('site.category', slug=category.slug) }}" 
-                           class="btn btn-outline-success">Xem sản phẩm</a>
+    <div class="hero-section py-5 mb-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1 class="hero-title mb-4">Fuji Fruit</h1>
+                    <p class="hero-subtitle">Trái cây tươi ngon, chất lượng cao, giao hàng tận nơi</p>
+                    <div class="hero-badges">
+                        <span class="hero-badge">Giao hàng miễn phí từ 500k</span>
+                        <span class="hero-badge">Cam kết chất lượng</span>
+                        <span class="hero-badge">Hỗ trợ 24/7</span>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
 
-    <!-- New Products Section -->
-    <div class="container mb-5">
-        <h2 class="mb-4">Sản phẩm mới</h2>
-        <div class="row">
-            {% for product in new_products %}
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                {% include '_partials/product_card.html' %}
-            </div>
-            {% endfor %}
+    <div class="container">
+        <!-- Featured Categories Section -->
+        {% if featured_categories %}
+        <div class="section-header">
+            <h2 class="section-title">Danh mục nổi bật</h2>
+            <p class="section-subtitle">Khám phá các loại trái cây tươi ngon của chúng tôi</p>
         </div>
         
-        {% if new_products|length == 0 %}
-        <div class="text-center text-muted">
-            <p>Chưa có sản phẩm mới</p>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Sale Products Section -->
-    {% if sale_products %}
-    <div class="container mb-5">
-        <h2 class="mb-4 text-danger">
-            <i class="bi bi-fire"></i> Đang giảm giá
-        </h2>
-        <div class="row">
-            {% for product in sale_products %}
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                {% include '_partials/product_card.html' %}
-            </div>
+        <div class="category-grid">
+            {% for category in featured_categories %}
+            <a href="{{ url_for('site.category', slug=category.slug) }}" class="category-card">
+                <h6 class="category-name">{{ category.name }}</h6>
+            </a>
             {% endfor %}
         </div>
+        {% endif %}
+
+        <!-- Sale Products Section -->
+        {% if sale_products %}
+        <div class="product-section">
+            <div class="product-section-header">
+                <h2 class="product-section-title sale">Đang giảm giá</h2>
+                <a href="{{ url_for('site.products') }}" class="view-all-btn btn-outline-danger">Xem tất cả</a>
+            </div>
+            <div class="row">
+                {% for product in sale_products %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    {% include '_partials/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Latest Products Section -->
+        {% if latest_products %}
+        <div class="product-section">
+            <div class="product-section-header">
+                <h2 class="product-section-title latest">Sản phẩm mới nhất</h2>
+                <a href="{{ url_for('site.products') }}" class="view-all-btn btn-outline-primary">Xem tất cả</a>
+            </div>
+            <div class="row">
+                {% for product in latest_products %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    {% include '_partials/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Best Selling Products Section -->
+        {% if best_selling_products %}
+        <div class="product-section">
+            <div class="product-section-header">
+                <h2 class="product-section-title bestseller">Bán chạy nhất</h2>
+                <a href="{{ url_for('site.products') }}" class="view-all-btn btn-outline-warning">Xem tất cả</a>
+            </div>
+            <div class="row">
+                {% for product in best_selling_products %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    {% include '_partials/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top Rated Products Section -->
+        {% if top_rated_products %}
+        <div class="product-section">
+            <div class="product-section-header">
+                <h2 class="product-section-title top-rated">Đánh giá cao nhất</h2>
+                <a href="{{ url_for('site.products') }}" class="view-all-btn btn-outline-success">Xem tất cả</a>
+            </div>
+            <div class="row">
+                {% for product in top_rated_products %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    {% include '_partials/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Testimonials Section -->
+        <div class="testimonial-section">
+            <div class="section-header">
+                <h2 class="section-title">Khách hàng nói gì về chúng tôi</h2>
+                <p class="section-subtitle">Những phản hồi tích cực từ khách hàng thân thiết</p>
+            </div>
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div class="testimonial-card">
+                        <div class="rating-stars">★★★★★</div>
+                        <p class="testimonial-text">"Trái cây rất tươi ngon, giao hàng nhanh chóng. Tôi sẽ quay lại đặt hàng thường xuyên!"</p>
+                        <div class="testimonial-author">Chị Minh Hoa, Hà Nội</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="testimonial-card">
+                        <div class="rating-stars">★★★★★</div>
+                        <p class="testimonial-text">"Chất lượng tuyệt vời, đóng gói cẩn thận. Đặc biệt là những quả táo Fuji rất ngọt!"</p>
+                        <div class="testimonial-author">Anh Văn Nam, TP.HCM</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="testimonial-card">
+                        <div class="rating-stars">★★★★★</div>
+                        <p class="testimonial-text">"Dịch vụ khách hàng tận tâm, hỗ trợ rất nhiệt tình. Sẽ giới thiệu cho bạn bè!"</p>
+                        <div class="testimonial-author">Chị Thu Hà, Đà Nẵng</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promotion Banner -->
+        <div class="promo-banner">
+            <h3 class="promo-title">Ưu đãi đặc biệt!</h3>
+            <p class="promo-subtitle">Miễn phí giao hàng cho đơn hàng từ 500.000đ</p>
+            <p class="promo-description">Áp dụng cho tất cả khu vực nội thành</p>
+            <a href="{{ url_for('site.products') }}" class="promo-btn">
+                Mua ngay
+            </a>
+        </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}
 

@@ -33,6 +33,10 @@ class StockService:
         """Release reserved stock (increase quantity)"""
         stock_repo.increase_stock(product_id, qty)
     
+    def restore_stock(self, product_id: int, qty: int):
+        """Restore stock when order is cancelled (same as release_stock)"""
+        self.release_stock(product_id, qty)
+    
     def update_stock(self, product_id: int, qty: int) -> Dict:
         """Update stock quantity (admin function)"""
         stock = stock_repo.set_stock(product_id, qty)

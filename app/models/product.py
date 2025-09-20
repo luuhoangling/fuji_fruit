@@ -17,6 +17,7 @@ class Product(BaseModel):
     sale_price = db.Column(db.Numeric(12, 2), nullable=True)
     sale_start = db.Column(db.DateTime, nullable=True)
     sale_end = db.Column(db.DateTime, nullable=True)
+    sale_active = db.Column(db.Boolean, default=False, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     
     # Relationships
@@ -65,14 +66,18 @@ class ProductCategory(db.Model):
     category_id = db.Column(db.BigInteger, db.ForeignKey('categories.id'), primary_key=True)
 
 
-class ProductImage(BaseModel):
+class ProductImage(db.Model):
     """Product images model"""
     __tablename__ = 'product_images'
     
+    # Define columns explicitly to match database schema
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     product_id = db.Column(db.BigInteger, db.ForeignKey('products.id'), nullable=False)
     image_url = db.Column(db.String(1024), nullable=False)
     alt = db.Column(db.String(255), nullable=True)
     sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), nullable=False)
+    # Note: No updated_at column to match database schema
     
     def to_dict(self):
         return {

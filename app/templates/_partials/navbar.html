@@ -13,19 +13,8 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('site.home') }}">Trang chủ</a>
                 </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="{{ url_for('site.products') }}" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                        Sản phẩm
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('site.products') }}">Tất cả sản phẩm</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        {% if categories %}
-                            {% for category in categories %}
-                            <li><a class="dropdown-item" href="{{ url_for('site.category', slug=category.slug) }}">{{ category.name }}</a></li>
-                            {% endfor %}
-                        {% endif %}
-                    </ul>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('site.products') }}">Sản phẩm</a>
                 </li>
             </ul>
             
@@ -50,6 +39,9 @@
                             <li><a class="dropdown-item" href="{{ url_for('site.profile') }}">
                                 <i class="bi bi-person"></i> Thông tin cá nhân
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('site.my_orders') }}">
+                                <i class="bi bi-box-seam"></i> Đơn hàng của tôi
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('site.logout') }}">
                                 <i class="bi bi-box-arrow-right"></i> Đăng xuất
@@ -69,12 +61,6 @@
                         </a>
                     </li>
                 {% endif %}
-                
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                        <i class="bi bi-gear"></i> Quản trị
-                    </a>
-                </li>
             </ul>
         </div>
     </div>

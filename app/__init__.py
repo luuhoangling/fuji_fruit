@@ -36,15 +36,20 @@ def create_app(config_name=None):
         return f"{int(amount):,}₫".replace(',', '.')
     
     # Import and register blueprints
-    from app.api import api_bp, admin_bp
+    from app.api import api_bp
     app.register_blueprint(api_bp)
-    app.register_blueprint(admin_bp)
+    
+    # Exempt API routes from CSRF protection
+    from app.extensions import csrf
+    csrf.exempt(api_bp)
+    
+    # Exempt API blueprint from CSRF protection
+    from app.extensions import csrf
+    csrf.exempt(api_bp)
     
     # Import and register frontend blueprints
     from app.blueprints.site.views import site_bp
-    from app.blueprints.admin.views import admin_bp as admin_frontend_bp
     app.register_blueprint(site_bp)
-    app.register_blueprint(admin_frontend_bp, url_prefix='/admin')
     
     # Register error handlers
     from app.api.errors import register_error_handlers

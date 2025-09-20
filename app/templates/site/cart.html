@@ -75,9 +75,6 @@
                         <a href="{{ url_for('site.home') }}" class="btn btn-outline-primary">
                             <i class="bi bi-arrow-left"></i> Tiếp tục mua sắm
                         </a>
-                        <button id="updateCartBtn" class="btn btn-secondary">
-                            <i class="bi bi-arrow-clockwise"></i> Cập nhật giỏ hàng
-                        </button>
                     </div>
                 </div>
             </div>
@@ -130,7 +127,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const cartItems = document.getElementById('cartItems');
     const subtotalElement = document.getElementById('subtotal');
-    const updateCartBtn = document.getElementById('updateCartBtn');
     
     // Quantity controls
     cartItems.addEventListener('click', function(e) {
@@ -141,19 +137,59 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.classList.contains('qty-decrease')) {
             const currentQty = parseInt(qtyInput.value);
             if (currentQty > 1) {
-                qtyInput.value = currentQty - 1;
+                const newQty = currentQty - 1;
+                qtyInput.value = newQty;
                 updateLineTotal(row);
+                updateCartOnServer(row.dataset.productId, newQty);
             }
         } else if (target.classList.contains('qty-increase')) {
             const currentQty = parseInt(qtyInput.value);
             if (currentQty < 99) {
-                qtyInput.value = currentQty + 1;
+                const newQty = currentQty + 1;
+                qtyInput.value = newQty;
                 updateLineTotal(row);
+                updateCartOnServer(row.dataset.productId, newQty);
             }
         } else if (target.classList.contains('remove-item') || target.closest('.remove-item')) {
-            qtyInput.value = 0;
-            updateLineTotal(row);
-            row.style.opacity = '0.5';
+            const productId = row.dataset.productId;
+            if (confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')) {
+                // Send update request to remove item
+                fetch('/cart/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ 
+                        updates: { [productId]: 0 } 
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the row from display
+                        row.remove();
+                        updateSubtotal();
+                        
+                        // Update cart count in navbar
+                        const cartCountElements = document.querySelectorAll('.cart-count');
+                        cartCountElements.forEach(el => {
+                            el.textContent = data.cart_count;
+                        });
+                        
+                        // Check if cart is empty
+                        if (data.cart_count === 0) {
+                            location.reload(); // Reload to show empty cart message
+                        }
+                    } else {
+                        alert('Có lỗi xảy ra khi xóa sản phẩm');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Có lỗi xảy ra');
+                });
+            }
         }
     });
     
@@ -161,7 +197,9 @@ document.addEventListener('DOMContentLoaded', function() {
     cartItems.addEventListener('change', function(e) {
         if (e.target.classList.contains('qty-input')) {
             const row = e.target.closest('tr');
+            const newQty = parseInt(e.target.value);
             updateLineTotal(row);
+            updateCartOnServer(row.dataset.productId, newQty);
         }
     });
     
@@ -191,39 +229,31 @@ document.addEventListener('DOMContentLoaded', function() {
         subtotalElement.textContent = new Intl.NumberFormat('vi-VN').format(total) + '₫';
     }
     
-    // Update cart button
-    updateCartBtn.addEventListener('click', function() {
-        const updates = {};
-        const rows = cartItems.querySelectorAll('tr');
-        
-        rows.forEach(row => {
-            const productId = row.dataset.productId;
-            const qty = parseInt(row.querySelector('.qty-input').value);
-            updates[productId] = qty;
-        });
-        
+    function updateCartOnServer(productId, qty) {
         fetch('/cart/update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ updates: updates })
+            body: JSON.stringify({ 
+                updates: { [productId]: qty } 
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to reflect changes
-                location.reload();
-            } else {
-                alert('Có lỗi xảy ra khi cập nhật giỏ hàng');
+                // Update cart count in navbar
+                const cartCountElements = document.querySelectorAll('.cart-count');
+                cartCountElements.forEach(el => {
+                    el.textContent = data.cart_count;
+                });
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Có lỗi xảy ra');
+            console.error('Error updating cart:', error);
         });
-    });
+    }
 });
 </script>
 {% endblock %}

@@ -1,17 +1,21 @@
 """Review model"""
 
 from app.extensions import db
-from app.models import BaseModel
+from datetime import datetime
 
 
-class ProductReview(BaseModel):
+class ProductReview(db.Model):
     """Product review model"""
     __tablename__ = 'product_reviews'
     
+    # Define columns explicitly to match database schema
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     product_id = db.Column(db.BigInteger, db.ForeignKey('products.id'), nullable=False)
     user_name = db.Column(db.String(100), nullable=True)
     rating = db.Column(db.SmallInteger, nullable=False)  # 1-5
     content = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # Note: No updated_at column to match database schema
     
     def __repr__(self):
         return f'<ProductReview {self.id} - {self.rating}/5>'

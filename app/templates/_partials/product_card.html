@@ -4,7 +4,7 @@
              class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
         
         <!-- Sale badge -->
-        {% if product.original_price and product.original_price > product.price %}
+        {% if product.sale_active and product.original_price and product.original_price > product.price %}
             <span class="badge bg-danger position-absolute top-0 end-0 m-2">
                 -{{ (((product.original_price - product.price) / product.original_price) * 100) | round | int }}%
             </span>
@@ -26,12 +26,24 @@
         
         <div class="price-section mb-2">
             <span class="h6 text-primary fw-bold">{{ product.price | vnd }}</span>
-            {% if product.original_price and product.original_price > product.price %}
+            {% if product.sale_active and product.original_price and product.original_price > product.price %}
                 <small class="text-muted text-decoration-line-through ms-2">
                     {{ product.original_price | vnd }}
                 </small>
             {% endif %}
         </div>
+        
+        <!-- Sale period info -->
+        {% if product.sale_active %}
+            <div class="sale-info mb-2">
+                <small class="text-danger">
+                    <i class="bi bi-fire"></i> Đang giảm giá
+                    {% if product.sale_end %}
+                        đến {{ product.sale_end.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                </small>
+            </div>
+        {% endif %}
         
         {% if product.rating %}
             <div class="rating mb-2">

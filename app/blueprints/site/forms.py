@@ -54,9 +54,9 @@ class CheckoutForm(FlaskForm):
 
 class LoginForm(FlaskForm):
     """Form for user login"""
-    email = EmailField('Email', 
-                      validators=[DataRequired(), Email()],
-                      render_kw={'placeholder': 'example@email.com'})
+    username = StringField('Tên đăng nhập', 
+                          validators=[DataRequired(), Length(min=3, max=20)],
+                          render_kw={'placeholder': 'Nhập tên đăng nhập'})
     
     password = PasswordField('Mật khẩu', 
                             validators=[DataRequired()],

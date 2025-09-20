@@ -86,6 +86,55 @@ class OrderRepository(BaseRepository):
             db.joinedload(Order.items),
             db.joinedload(Order.events)
         ).filter_by(id=order_id).first()
+    
+    def get_orders_by_status(self, status: str, page: int = 1, per_page: int = 20) -> Tuple[List[Order], int]:
+        """Get orders by status with pagination"""
+        query = self.model.query.filter_by(status=status)
+        query = query.order_by(desc(Order.created_at))
+        
+        # Get total count
+        total = query.count()
+        
+        # Pagination
+        offset = (page - 1) * per_page
+        orders = query.offset(offset).limit(per_page).all()
+        
+        return orders, total
+    
+    def update_order_status(self, order_id: int, new_status: str, note: str = None) -> bool:
+        """Update order status and add event"""
+        try:
+            order = self.get_by_id(order_id)
+            if not order:
+                return False
+            
+            old_status = order.status
+            order.status = new_status
+            
+            # Add status change event
+            self.add_event(order_id, new_status, note or f"Đơn hàng chuyển từ {old_status} sang {new_status}")
+            
+            return True
+        except Exception:
+            return False
+    
+    def cancel_order(self, order_id: int, note: str = None) -> bool:
+        """Cancel order if possible"""
+        try:
+            order = self.get_by_id(order_id)
+            if not order:
+                return False
+            
+            # Only allow cancellation for pending and confirmed orders
+            if order.status not in ['pending', 'confirmed']:
+                return False
+            
+            order.status = 'cancelled'
+            self.add_event(order_id, 'cancelled', note or "Đơn hàng đã được hủy")
+            
+            return True
+        except Exception:
+            return False
 
 
 class OrderItemRepository(BaseRepository):

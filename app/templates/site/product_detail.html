@@ -39,25 +39,25 @@
             
             <!-- Price -->
             <div class="price-section mb-3">
-                <span class="h3 text-primary fw-bold">{{ product.price | vnd }}</span>
-                {% if product.original_price and product.original_price > product.price %}
+                <span class="h3 text-primary fw-bold">{{ effective_price | vnd }}</span>
+                {% if original_price and original_price > effective_price %}
                     <span class="h5 text-muted text-decoration-line-through ms-3">
-                        {{ product.original_price | vnd }}
+                        {{ original_price | vnd }}
                     </span>
                     <span class="badge bg-danger ms-2">
-                        -{{ (((product.original_price - product.price) / product.original_price) * 100) | round | int }}%
+                        -{{ (((original_price - effective_price) / original_price) * 100) | round | int }}%
                     </span>
                 {% endif %}
             </div>
 
             <!-- Stock Status -->
             <div class="stock-status mb-3">
-                {% if product.stock.in_stock %}
+                {% if stock_data.in_stock %}
                     <span class="badge bg-success fs-6">
                         <i class="bi bi-check-circle"></i> Còn hàng
                     </span>
-                    {% if product.stock.qty %}
-                        <small class="text-muted ms-2">{{ product.stock.qty }} sản phẩm có sẵn</small>
+                    {% if stock_data.qty %}
+                        <small class="text-muted ms-2">{{ stock_data.qty }} sản phẩm có sẵn</small>
                     {% endif %}
                 {% else %}
                     <span class="badge bg-secondary fs-6">
@@ -83,7 +83,7 @@
             {% endif %}
 
             <!-- Add to Cart -->
-            {% if product.stock.in_stock %}
+            {% if stock_data.in_stock %}
             <div class="add-to-cart-section">
                 <div class="row">
                     <div class="col-md-4 mb-2">
@@ -113,6 +113,49 @@
             {% include 'site/reviews_section.html' %}
         </div>
     </div>
+
+    <!-- Related Products Section -->
+    {% if random_products %}
+    <div class="row mt-5 related-products">
+        <div class="col-12">
+            <h3 class="mb-4">Sản phẩm tương tự</h3>
+            <div class="row">
+                {% for product in random_products %}
+                <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-4">
+                    <div class="card h-100 product-card">
+                        <a href="{{ url_for('site.product_detail', slug=product.slug) }}" class="text-decoration-none">
+                            <img src="{{ product.image_url or '/static/img/no-image.jpg' }}" 
+                                 class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+                        </a>
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title">
+                                <a href="{{ url_for('site.product_detail', slug=product.slug) }}" 
+                                   class="text-decoration-none text-dark">{{ product.name }}</a>
+                            </h6>
+                            <div class="mt-auto">
+                                <div class="price-section">
+                                    <span class="fw-bold text-primary">{{ product.effective_price | vnd }}</span>
+                                    {% if product.sale_price and product.sale_price < product.price %}
+                                        <small class="text-muted text-decoration-line-through d-block">
+                                            {{ product.price | vnd }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-outline-primary btn-sm w-100 quick-add-btn" 
+                                            data-product-id="{{ product.id }}">
+                                        <i class="bi bi-cart-plus"></i> Thêm
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -128,44 +171,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const addToCartBtn = document.getElementById('addToCartBtn');
     const quantityInput = document.getElementById('quantity');
     
+    // Main product add to cart
     if (addToCartBtn) {
         addToCartBtn.addEventListener('click', function() {
             const productId = this.dataset.productId;
             const qty = parseInt(quantityInput.value);
             
-            fetch('/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    product_id: productId,
-                    qty: qty
-                })
+            addToCart(productId, qty);
+        });
+    }
+    
+    // Quick add buttons for related products
+    const quickAddBtns = document.querySelectorAll('.quick-add-btn');
+    quickAddBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            addToCart(productId, 1);
+        });
+    });
+    
+    function addToCart(productId, qty) {
+        fetch('/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                qty: qty
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update cart count in navbar
-                    const cartBadge = document.querySelector('.navbar .badge');
-                    if (cartBadge) {
-                        cartBadge.textContent = data.cart_count;
-                    } else if (data.cart_count > 0) {
-                        const cartLink = document.querySelector('.navbar a[href*="cart"]');
-                        cartLink.innerHTML += ` <span class="badge bg-danger">${data.cart_count}</span>`;
-                    }
-                    
-                    // Show success message
-                    alert(data.message);
-                } else {
-                    alert(data.message);
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update cart count in navbar
+                const cartBadge = document.querySelector('.navbar .badge');
+                if (cartBadge) {
+                    cartBadge.textContent = data.cart_count;
+                } else if (data.cart_count > 0) {
+                    const cartLink = document.querySelector('.navbar a[href*="cart"]');
+                    cartLink.innerHTML += ` <span class="badge bg-danger">${data.cart_count}</span>`;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra');
-            });
+                
+                // Show success message
+                alert(data.message);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra');
         });
     }
 });

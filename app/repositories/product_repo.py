@@ -208,21 +208,11 @@ class ProductRepository(BaseRepository):
     
     def get_products_on_sale(self, limit: int = 12) -> List[Product]:
         """Get products currently on sale"""
-        from datetime import datetime
-        now = datetime.utcnow()
-        
         return self.model.query.filter(
             and_(
                 self.model.is_active == True,
-                self.model.sale_price.isnot(None),
-                or_(
-                    self.model.sale_start.is_(None),
-                    self.model.sale_start <= now
-                ),
-                or_(
-                    self.model.sale_end.is_(None),
-                    self.model.sale_end >= now
-                )
+                self.model.sale_active == True,
+                self.model.sale_price.isnot(None)
             )
         ).order_by(desc(self.model.created_at))\
          .limit(limit)\
@@ -344,6 +334,66 @@ class ProductRepository(BaseRepository):
         products = base_query.offset(offset).limit(per_page).all()
         
         return products, total
+
+    def get_random_products(self, limit: int = 10, exclude_id: int = None) -> List[Product]:
+        """Get random products, excluding specific product if provided"""
+        query = self.model.query.filter(self.model.is_active == True)
+        
+        if exclude_id:
+            query = query.filter(self.model.id != exclude_id)
+        
+        # Use func.random() for SQLite/PostgreSQL or func.rand() for MySQL
+        return query.order_by(func.random()).limit(limit).all()
+
+    def get_best_selling_products(self, limit: int = 12) -> List[Product]:
+        """Get best selling products based on order quantities"""
+        from app.models.order import OrderItem
+        
+        # Query to get products with highest total sales
+        subquery = db.session.query(
+            OrderItem.product_id,
+            func.sum(OrderItem.qty).label('total_sold')
+        ).group_by(OrderItem.product_id).subquery()
+        
+        return self.model.query.join(
+            subquery, self.model.id == subquery.c.product_id
+        ).filter(
+            self.model.is_active == True
+        ).order_by(
+            desc(subquery.c.total_sold)
+        ).limit(limit).all()
+
+    def get_top_rated_products(self, limit: int = 12, min_reviews: int = 3) -> List[Product]:
+        """Get products with highest average rating (minimum review count required)"""
+        return self.model.query.join(ProductRating, self.model.id == ProductRating.product_id).filter(
+            and_(
+                self.model.is_active == True,
+                ProductRating.review_count >= min_reviews
+            )
+        ).order_by(
+            desc(ProductRating.avg_rating),
+            desc(ProductRating.review_count)
+        ).limit(limit).all()
+
+    def get_featured_categories(self, limit: int = 6) -> List[Category]:
+        """Get featured categories with product count"""
+        from app.models.product import ProductCategory
+        
+        # Get categories with most products
+        subquery = db.session.query(
+            ProductCategory.category_id,
+            func.count(ProductCategory.product_id).label('product_count')
+        ).join(
+            self.model, ProductCategory.product_id == self.model.id
+        ).filter(
+            self.model.is_active == True
+        ).group_by(ProductCategory.category_id).subquery()
+        
+        return Category.query.join(
+            subquery, Category.id == subquery.c.category_id
+        ).order_by(
+            desc(subquery.c.product_count)
+        ).limit(limit).all()
 
 
 # Global instance

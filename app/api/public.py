@@ -209,6 +209,52 @@ def mock_pay_order(order_code):
         raise BusinessLogicError(f"Failed to process payment: {str(e)}")
 
 
+@api_bp.route('/orders/<order_code>/cancel', methods=['POST'])
+def cancel_order(order_code):
+    """Cancel an order"""
+    try:
+        request_data = request.get_json() or {}
+        note = request_data.get('note')
+        
+        order = order_service.cancel_order(order_code, note)
+        return jsonify(order)
+        
+    except OrderError as e:
+        if "not found" in str(e):
+            raise NotFoundError("Order", order_code)
+        raise BusinessLogicError(str(e))
+    except Exception as e:
+        raise BusinessLogicError(f"Failed to cancel order: {str(e)}")
+
+
+@api_bp.route('/orders', methods=['GET'])
+def get_orders():
+    """Get orders by status with pagination"""
+    try:
+        status = request.args.get('status')
+        query = request.args.get('q', '')
+        page = int(request.args.get('page', 1))
+        per_page = min(int(request.args.get('per_page', 20)), 100)
+        
+        if status:
+            orders, total = order_service.get_orders_by_status(status, page, per_page)
+        else:
+            orders, total = order_service.search_orders(status, query, page, per_page)
+        
+        return jsonify({
+            'orders': orders,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        raise BusinessLogicError(f"Failed to fetch orders: {str(e)}")
+
+
 # Health check
 @api_bp.route('/health', methods=['GET'])
 def health_check():

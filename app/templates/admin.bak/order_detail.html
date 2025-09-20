@@ -157,10 +157,10 @@
                         <span>{{ order.shipping_fee | vnd }}</span>
                     </div>
                     
-                    {% if order.discount > 0 %}
+                    {% if order.discount_amt > 0 %}
                     <div class="d-flex justify-content-between mb-2 text-success">
                         <span>Giảm giá:</span>
-                        <span>-{{ order.discount | vnd }}</span>
+                        <span>-{{ order.discount_amt | vnd }}</span>
                     </div>
                     {% endif %}
                     
@@ -195,7 +195,7 @@
                     <!-- Mock Payment (if applicable) -->
                     {% if order.payment_method == 'MOCK_TRANSFER' and order.payment_status == 'unpaid' %}
                     <form method="POST" action="{{ url_for('admin.order_mock_pay', id=order.id) }}">
-                        {{ csrf_token() }}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-success w-100">
                             <i class="bi bi-credit-card"></i> Xác nhận thanh toán
                         </button>
