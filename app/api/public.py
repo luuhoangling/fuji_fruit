@@ -3,6 +3,7 @@
 from flask import request, jsonify
 from app.api import api_bp
 from app.api.errors import NotFoundError, ValidationAPIError, BusinessLogicError, validate_request_json, serialize_response
+from app.auth import login_required, get_current_user
 from app.repositories.category_repo import category_repo
 from app.repositories.product_repo import product_repo
 from app.services.review_service import review_service
@@ -150,15 +151,22 @@ def create_product_review(slug):
 
 # Orders
 @api_bp.route('/orders', methods=['POST'])
+@login_required
 @handle_idempotency
 def create_order():
     """Create a new order"""
     try:
+        # Get current authenticated user
+        current_user = get_current_user()
+        
         # Validate request
         if not request.is_json:
             raise ValidationAPIError("Request must be JSON")
         
         order_data = validate_request_json(OrderCreateSchema, request.get_json())
+        
+        # Add user_id to order data
+        order_data['user_id'] = current_user.id
         
         # Get idempotency key from headers
         idempotency_key = request.headers.get('Idempotency-Key')
@@ -180,10 +188,14 @@ def create_order():
 
 
 @api_bp.route('/orders/<order_code>', methods=['GET'])
+@login_required
 def get_order_detail(order_code):
     """Get order details by order code"""
     try:
-        order = order_service.get_order_by_code(order_code)
+        # Get current authenticated user
+        current_user = get_current_user()
+        
+        order = order_service.get_order_by_code(order_code, current_user.id)
         return jsonify(order)
         
     except OrderError as e:
@@ -195,10 +207,14 @@ def get_order_detail(order_code):
 
 
 @api_bp.route('/orders/<order_code>/mock-pay', methods=['POST'])
+@login_required
 def mock_pay_order(order_code):
     """Mark order as mock paid"""
     try:
-        order = order_service.mock_pay(order_code)
+        # Get current authenticated user
+        current_user = get_current_user()
+        
+        order = order_service.mock_pay(order_code, current_user.id)
         return jsonify(order)
         
     except OrderError as e:
@@ -210,13 +226,17 @@ def mock_pay_order(order_code):
 
 
 @api_bp.route('/orders/<order_code>/cancel', methods=['POST'])
+@login_required
 def cancel_order(order_code):
     """Cancel an order"""
     try:
+        # Get current authenticated user
+        current_user = get_current_user()
+        
         request_data = request.get_json() or {}
         note = request_data.get('note')
         
-        order = order_service.cancel_order(order_code, note)
+        order = order_service.cancel_order(order_code, note, current_user.id)
         return jsonify(order)
         
     except OrderError as e:
@@ -228,18 +248,22 @@ def cancel_order(order_code):
 
 
 @api_bp.route('/orders', methods=['GET'])
+@login_required
 def get_orders():
     """Get orders by status with pagination"""
     try:
+        # Get current authenticated user
+        current_user = get_current_user()
+        
         status = request.args.get('status')
         query = request.args.get('q', '')
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 100)
         
         if status:
-            orders, total = order_service.get_orders_by_status(status, page, per_page)
+            orders, total = order_service.get_orders_by_status(status, page, per_page, current_user.id)
         else:
-            orders, total = order_service.search_orders(status, query, page, per_page)
+            orders, total = order_service.search_orders(status, query, page, per_page, current_user.id)
         
         return jsonify({
             'orders': orders,

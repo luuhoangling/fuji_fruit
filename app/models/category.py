@@ -11,6 +11,7 @@ class Category(BaseModel):
     parent_id = db.Column(db.BigInteger, db.ForeignKey('categories.id'), nullable=True)
     name = db.Column(db.String(255), nullable=False)
     slug = db.Column(db.String(255), unique=True, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     
     # Relationships - loại bỏ self-referencing relationship phức tạp
     # Sẽ sử dụng query trực tiếp trong repository thay vì relationship
@@ -24,7 +25,8 @@ class Category(BaseModel):
             'id': self.id,
             'name': self.name,
             'slug': self.slug,
-            'parent_id': self.parent_id
+            'parent_id': self.parent_id,
+            'is_active': self.is_active
         }
         
         if include_children:

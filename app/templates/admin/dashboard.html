@@ -1,0 +1,179 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Tổng quan hệ thống{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h3>{{ stats.total_products }}</h3>
+                    <p class="mb-0">Tổng sản phẩm</p>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-box fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h3>{{ stats.total_orders }}</h3>
+                    <p class="mb-0">Tổng đơn hàng</p>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h3>{{ stats.total_users }}</h3>
+                    <p class="mb-0">Tổng khách hàng</p>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-users fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h3>{{ "{:,.0f}".format(stats.total_revenue or 0) }}đ</h3>
+                    <p class="mb-0">Doanh thu (30 ngày)</p>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Orders -->
+    <div class="col-md-8">
+        <div class="card table-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-list"></i> Đơn hàng gần đây
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Trạng thái</th>
+                                <th>Tổng tiền</th>
+                                <th>Ngày đặt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in stats.recent_orders_list %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+                                       class="text-decoration-none">
+                                        {{ order.order_code }}
+                                    </a>
+                                </td>
+                                <td>{{ order.customer_name }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                        <span class="badge bg-warning">Chờ xử lý</span>
+                                    {% elif order.status == 'confirmed' %}
+                                        <span class="badge bg-info">Đã xác nhận</span>
+                                    {% elif order.status == 'shipping' %}
+                                        <span class="badge bg-primary">Đang giao</span>
+                                    {% elif order.status == 'delivered' %}
+                                        <span class="badge bg-success">Đã giao</span>
+                                    {% elif order.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Đã hủy</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "{:,.0f}".format(order.grand_total or 0) }}đ</td>
+                                <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else '' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('admin.orders') }}" class="btn btn-custom">
+                    <i class="fas fa-eye"></i> Xem tất cả đơn hàng
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-md-4">
+        <div class="card table-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-bolt"></i> Thao tác nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-3">
+                    <a href="{{ url_for('admin.create_product') }}" class="btn btn-custom">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm mới
+                    </a>
+                    
+                    <a href="{{ url_for('admin.create_discount') }}" class="btn btn-custom">
+                        <i class="fas fa-percent"></i> Tạo mã giảm giá
+                    </a>
+                    
+                    <a href="{{ url_for('admin.create_shipping_rate') }}" class="btn btn-custom">
+                        <i class="fas fa-truck"></i> Thêm phí ship
+                    </a>
+                    
+                    <a href="{{ url_for('admin.orders') }}?status=pending" class="btn btn-outline-warning">
+                        <i class="fas fa-clock"></i> Đơn chờ xử lý ({{ stats.recent_orders }})
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Info -->
+        <div class="card table-custom mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-info-circle"></i> Thông tin hệ thống
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6>Đơn hàng mới</h6>
+                        <h4 class="text-primary">{{ stats.recent_orders }}</h4>
+                        <small class="text-muted">30 ngày qua</small>
+                    </div>
+                    <div class="col-6">
+                        <h6>Doanh thu</h6>
+                        <h4 class="text-success">{{ "{:,.0f}".format(stats.total_revenue or 0) }}đ</h4>
+                        <small class="text-muted">30 ngày qua</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

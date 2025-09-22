@@ -4,7 +4,7 @@
              class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
         
         <!-- Sale badge -->
-        {% if product.sale_active and product.original_price and product.original_price > product.price %}
+        {% if product.sale_active and product.original_price and product.original_price > product.price and product.original_price > 0 %}
             <span class="badge bg-danger position-absolute top-0 end-0 m-2">
                 -{{ (((product.original_price - product.price) / product.original_price) * 100) | round | int }}%
             </span>
@@ -48,7 +48,7 @@
         {% if product.rating %}
             <div class="rating mb-2">
                 {% include '_partials/rating_stars.html' %}
-                <small class="text-muted ms-1">({{ product.rating.count }})</small>
+                <small class="text-muted ms-1">({{ product.rating.count or 0 }})</small>
             </div>
         {% endif %}
         

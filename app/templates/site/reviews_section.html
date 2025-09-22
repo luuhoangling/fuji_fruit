@@ -7,9 +7,9 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="text-center">
-                    <div class="h2 text-primary mb-1">{{ "%.1f" | format(product.rating.avg) }}</div>
+                    <div class="h2 text-primary mb-1">{{ "%.1f" | format(product.rating.avg or 0) }}</div>
                     {% include '_partials/rating_stars.html' %}
-                    <div class="text-muted mt-1">{{ product.rating.count }} đánh giá</div>
+                    <div class="text-muted mt-1">{{ product.rating.count or 0 }} đánh giá</div>
                 </div>
             </div>
         </div>

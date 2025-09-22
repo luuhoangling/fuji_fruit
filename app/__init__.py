@@ -35,6 +35,13 @@ def create_app(config_name=None):
             return "0₫"
         return f"{int(amount):,}₫".replace(',', '.')
     
+    # Add context processor for current user
+    @app.context_processor
+    def inject_current_user():
+        """Inject current user into all templates"""
+        from app.auth import get_current_user
+        return dict(current_user=get_current_user())
+    
     # Import and register blueprints
     from app.api import api_bp
     app.register_blueprint(api_bp)
@@ -50,6 +57,10 @@ def create_app(config_name=None):
     # Import and register frontend blueprints
     from app.blueprints.site.views import site_bp
     app.register_blueprint(site_bp)
+    
+    # Import and register admin blueprint
+    from app.blueprints.admin import admin_bp
+    app.register_blueprint(admin_bp)
     
     # Register error handlers
     from app.api.errors import register_error_handlers

@@ -1,0 +1,213 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}Quản lý mã giảm giá{% endblock %}
+{% block page_subtitle %}Tạo và quản lý các mã giảm giá{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Tìm kiếm mã giảm giá..." 
+                   value="{{ search }}" id="searchInput">
+            <button class="btn btn-outline-secondary" type="button" onclick="searchDiscounts()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('admin.create_discount') }}" class="btn btn-custom">
+            <i class="fas fa-plus"></i> Tạo mã giảm giá mới
+        </a>
+    </div>
+</div>
+
+<div class="card table-custom">
+    <div class="card-header">
+        <h5 class="card-title mb-0 text-white">
+            <i class="fas fa-percent"></i> Danh sách mã giảm giá ({{ total }} mã)
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Mã giảm giá</th>
+                        <th>Tên</th>
+                        <th>Loại giảm giá</th>
+                        <th>Giá trị</th>
+                        <th>Đã sử dụng</th>
+                        <th>Hiệu lực</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for discount in discounts %}
+                    <tr>
+                        <td>
+                            <strong class="text-primary">{{ discount.code }}</strong>
+                        </td>
+                        <td>
+                            {{ discount.name }}
+                            {% if discount.description %}
+                                <br>
+                                <small class="text-muted">{{ discount.description[:50] }}{% if discount.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if discount.discount_type == 'percentage' %}
+                                <span class="badge bg-info">Phần trăm</span>
+                            {% else %}
+                                <span class="badge bg-warning">Số tiền cố định</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if discount.discount_type == 'percentage' %}
+                                <strong>{{ discount.discount_value or 0 }}%</strong>
+                            {% else %}
+                                <strong>{{ "{:,.0f}".format(discount.discount_value or 0) }}đ</strong>
+                            {% endif %}
+                            
+                            {% if discount.min_order_amount > 0 %}
+                                <br>
+                                <small class="text-muted">Đơn tối thiểu: {{ "{:,.0f}".format(discount.min_order_amount or 0) }}đ</small>
+                            {% endif %}
+                            
+                            {% if discount.max_discount_amount %}
+                                <br>
+                                <small class="text-muted">Tối đa: {{ "{:,.0f}".format(discount.max_discount_amount or 0) }}đ</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ discount.used_count }}</strong>
+                            {% if discount.usage_limit %}
+                                / {{ discount.usage_limit }}
+                            {% endif %}
+                            
+                            {% if discount.usage_limit_per_user %}
+                                <br>
+                                <small class="text-muted">{{ discount.usage_limit_per_user }} lần/người</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>
+                                {{ discount.start_date.strftime('%Y-%m-%d') if discount.start_date else '' }}<br>
+                                đến {{ discount.end_date.strftime('%Y-%m-%d') if discount.end_date else '' }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if discount.is_valid %}
+                                <span class="badge bg-success">Có hiệu lực</span>
+                            {% elif not discount.is_active %}
+                                <span class="badge bg-secondary">Tạm dừng</span>
+                            {% else %}
+                                <span class="badge bg-danger">Hết hạn</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editDiscount({{ discount.id }})" title="Chỉnh sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteDiscount({{ discount.id }}, '{{ discount.code }}')"
+                                        title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if total > per_page %}
+    <div class="card-footer">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-0">
+                {% set total_pages = (total + per_page - 1) // per_page %}
+                
+                {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% set start_page = [1, page - 2]|max %}
+                {% set end_page = [total_pages, page + 2]|min %}
+                {% for p in range(start_page, end_page + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+                    </li>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function searchDiscounts() {
+    const search = document.getElementById('searchInput').value;
+    const url = new URL(window.location);
+    if (search) {
+        url.searchParams.set('search', search);
+    } else {
+        url.searchParams.delete('search');
+    }
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+}
+
+// Enter key search
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchDiscounts();
+    }
+});
+
+function editDiscount(discountId) {
+    // Implement edit functionality
+    alert('Chức năng chỉnh sửa sẽ được phát triển sau');
+}
+
+function deleteDiscount(discountId, discountCode) {
+    if (confirm(`Bạn có chắc chắn muốn xóa mã giảm giá "${discountCode}"?`)) {
+        fetch(`/admin/discounts/${discountId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Có lỗi xảy ra: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

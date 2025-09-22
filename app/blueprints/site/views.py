@@ -57,11 +57,21 @@ def get_cart_count():
     cart = session.get('cart', {})
     return sum(cart.values())
 
-def calculate_shipping_fee(subtotal, province=None):
-    """Calculate shipping fee based on subtotal and province"""
-    # Use ShippingService for consistency
-    shipping_service_instance = ShippingService()
-    return shipping_service_instance.compute_shipping(subtotal, province)
+def calculate_shipping_fee(subtotal, province=None, district=None, ward=None):
+    """Calculate shipping fee based on subtotal and location"""
+    # Use ShippingService with database session
+    db_session = get_db_session()
+    try:
+        shipping_service_instance = ShippingService(db_session)
+        result = shipping_service_instance.calculate_shipping_fee(
+            province=province,
+            district=district, 
+            ward=ward,
+            order_amount=subtotal
+        )
+        return result['shipping_fee']
+    finally:
+        db_session.close()
 
 @site_bp.context_processor
 def inject_globals():
@@ -422,6 +432,11 @@ def update_cart():
 @site_bp.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     """Checkout page"""
+    # Require user to be logged in for checkout
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để tiến hành đặt hàng', 'warning')
+        return redirect(url_for('site.login'))
+    
     items, subtotal = get_cart_from_session()
     if not items:
         flash('Giỏ hàng trống', 'error')
@@ -448,10 +463,16 @@ def checkout():
             order_service = OrderService()
             
             # Calculate shipping
-            shipping_fee = calculate_shipping_fee(subtotal, form.province.data)
+            shipping_fee = calculate_shipping_fee(
+                subtotal, 
+                form.province.data, 
+                form.district.data, 
+                form.ward.data
+            )
             
             # Create order payload with correct structure
             order_payload = {
+                'user_id': session['user_id'],  # Add current user's ID
                 'customer': {
                     'name': form.customer_name.data,
                     'phone': form.phone.data,
@@ -498,9 +519,56 @@ def checkout():
                          shipping_fee=shipping_fee,
                          grand_total=subtotal + shipping_fee)
 
+
+@site_bp.route('/api/calculate-shipping', methods=['POST'])
+@csrf.exempt
+def api_calculate_shipping():
+    """API endpoint to calculate shipping fee"""
+    try:
+        data = request.get_json()
+        subtotal = data.get('subtotal', 0)
+        province = data.get('province')
+        district = data.get('district')
+        ward = data.get('ward')
+        
+        shipping_fee = calculate_shipping_fee(subtotal, province, district, ward)
+        
+        # Get available shipping methods
+        db_session = get_db_session()
+        try:
+            shipping_service_instance = ShippingService(db_session)
+            result = shipping_service_instance.calculate_shipping_fee(
+                province=province,
+                district=district,
+                ward=ward,
+                order_amount=subtotal
+            )
+            
+            return jsonify({
+                'success': True,
+                'shipping_fee': result['shipping_fee'],
+                'is_free': result['is_free'],
+                'available_methods': result['available_methods'],
+                'selected_rate': result['shipping_rate']
+            })
+        finally:
+            db_session.close()
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'shipping_fee': 50000  # Default fallback
+        }), 400
+
 @site_bp.route('/orders/<order_code>')
 def order_detail(order_code):
     """Order detail page"""
+    # Require user to be logged in
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để xem chi tiết đơn hàng', 'warning')
+        return redirect(url_for('site.login'))
+    
     db_session = get_db_session()
     try:
         order_repo = OrderRepository(db_session)
@@ -509,6 +577,12 @@ def order_detail(order_code):
         order = order_repo.get_by_code(order_code)
         if not order:
             flash('Đơn hàng không tồn tại', 'error')
+            return redirect(url_for('site.home'))
+        
+        # Check if order belongs to current user - fix type mismatch
+        current_user_id = session.get('user_id')
+        if order.user_id and str(order.user_id) != str(current_user_id):
+            flash('Bạn không có quyền truy cập đơn hàng này', 'error')
             return redirect(url_for('site.home'))
         
         # Get order timeline from events relationship
@@ -524,6 +598,11 @@ def order_detail(order_code):
 @site_bp.route('/my-orders')
 def my_orders():
     """My orders page - show all orders"""
+    # Require user to be logged in
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để xem đơn hàng', 'warning')
+        return redirect(url_for('site.login'))
+    
     status = request.args.get('status', 'all')
     page = int(request.args.get('page', 1))
     per_page = 10
@@ -531,11 +610,12 @@ def my_orders():
     db_session = get_db_session()
     try:
         order_repo = OrderRepository(db_session)
+        current_user_id = session['user_id']
         
         if status == 'all':
-            orders, total = order_repo.search_orders(None, '', page, per_page)
+            orders, total = order_repo.search_orders(None, '', page, per_page, current_user_id)
         else:
-            orders, total = order_repo.get_orders_by_status(status, page, per_page)
+            orders, total = order_repo.get_orders_by_status(status, page, per_page, current_user_id)
         
         # Calculate pagination
         total_pages = (total + per_page - 1) // per_page
@@ -555,6 +635,11 @@ def my_orders():
 def cancel_order_view(order_code):
     """Cancel order from frontend"""
     
+    # Require user to be logged in
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để hủy đơn hàng', 'warning')
+        return redirect(url_for('site.login'))
+    
     db_session = get_db_session()
     try:
         order_repo = OrderRepository(db_session)
@@ -566,6 +651,12 @@ def cancel_order_view(order_code):
         order = order_repo.get_by_code(order_code)
         if not order:
             flash('Đơn hàng không tồn tại', 'error')
+            return redirect(url_for('site.my_orders'))
+        
+        # Check if order belongs to current user - fix type mismatch
+        current_user_id = session.get('user_id')
+        if order.user_id and str(order.user_id) != str(current_user_id):
+            flash('Bạn không có quyền hủy đơn hàng này', 'error')
             return redirect(url_for('site.my_orders'))
         
         # Only allow cancellation for pending and confirmed orders
@@ -590,6 +681,11 @@ def cancel_order_view(order_code):
 def mock_pay(order_code):
     """Mock payment for transfer orders"""
     
+    # Check if user is logged in
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để thanh toán', 'warning')
+        return redirect(url_for('site.login'))
+    
     db_session = get_db_session()
     try:
         order_repo = OrderRepository(db_session)
@@ -598,6 +694,12 @@ def mock_pay(order_code):
         order = order_repo.get_by_code(order_code)
         if not order:
             flash('Đơn hàng không tồn tại', 'error')
+            return redirect(url_for('site.home'))
+        
+        # Check if order belongs to current user - fix type mismatch
+        current_user_id = session.get('user_id')
+        if order.user_id and str(order.user_id) != str(current_user_id):
+            flash('Bạn không có quyền truy cập đơn hàng này', 'error')
             return redirect(url_for('site.home'))
         
         if order.payment_method != 'MOCK_TRANSFER':
@@ -662,9 +764,14 @@ def login():
                 
                 flash(f'Chào mừng {user.full_name}!', 'success')
                 
-                # Redirect to next page or home
+                # Redirect to appropriate page based on user role
                 next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('site.home'))
+                if next_page:
+                    return redirect(next_page)
+                elif user.is_admin():
+                    return redirect(url_for('admin.dashboard'))
+                else:
+                    return redirect(url_for('site.home'))
             else:
                 flash('Tên đăng nhập hoặc mật khẩu không đúng', 'error')
                 

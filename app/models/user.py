@@ -3,8 +3,29 @@ User model for authentication
 """
 from app.models import BaseModel
 from app.extensions import db
-from sqlalchemy import Boolean, String, DateTime
+from sqlalchemy import Boolean, String, DateTime, ForeignKey, Table
 from datetime import datetime
+
+
+# Association table for user-role many-to-many relationship
+user_roles = Table('user_roles', db.Model.metadata,
+    db.Column('user_id', db.BigInteger, ForeignKey('users.id'), primary_key=True),
+    db.Column('role_id', db.SmallInteger, ForeignKey('roles.id'), primary_key=True),
+    db.Column('assigned_at', DateTime, default=datetime.utcnow)
+)
+
+
+class Role(db.Model):
+    """Role model"""
+    __tablename__ = 'roles'
+    
+    id = db.Column(db.SmallInteger, primary_key=True)
+    code = db.Column(String(50), unique=True, nullable=False)
+    name = db.Column(String(100), nullable=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Role {self.code}>'
 
 
 class User(BaseModel):
@@ -26,6 +47,9 @@ class User(BaseModel):
     email_verified = db.Column(Boolean, default=False, nullable=False)
     last_login_at = db.Column(DateTime, nullable=True)
     
+    # Role relationship
+    roles = db.relationship('Role', secondary=user_roles, backref='users')
+    
     def __repr__(self):
         return f'<User {self.username}>'
     
@@ -34,9 +58,40 @@ class User(BaseModel):
         """Get user's display name"""
         return self.full_name or self.username
     
+    @property
+    def role_code(self):
+        """Get user's primary role code for backward compatibility"""
+        try:
+            if self.roles and len(self.roles) > 0:
+                return self.roles[0].code
+        except Exception:
+            pass
+        return 'customer'  # default role
+    
     def update_last_login(self):
         """Update last login timestamp"""
         self.last_login_at = datetime.utcnow()
+    
+    def is_admin(self):
+        """Check if user is admin"""
+        try:
+            return any(role.code == 'admin' for role in self.roles) if self.roles else False
+        except Exception:
+            return False
+    
+    def is_customer(self):
+        """Check if user is customer"""
+        try:
+            return any(role.code in ['customer', 'user'] for role in self.roles) if self.roles else True
+        except Exception:
+            return True
+    
+    def has_role(self, role_code):
+        """Check if user has specific role"""
+        try:
+            return any(role.code == role_code for role in self.roles) if self.roles else False
+        except Exception:
+            return False
     
     def to_dict(self):
         """Convert user to dictionary for JSON responses"""
@@ -50,6 +105,7 @@ class User(BaseModel):
             'avatar_url': self.avatar_url,
             'is_active': self.is_active,
             'email_verified': self.email_verified,
+            'role_code': self.role_code,
             'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

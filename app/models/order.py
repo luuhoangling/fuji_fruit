@@ -37,6 +37,7 @@ class Order(db.Model):
     
     # Define columns exactly matching database schema
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), nullable=True)  # UUID for authenticated users
     order_code = db.Column(db.String(20), unique=True, nullable=False)
     customer_name = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(30), nullable=False)
@@ -56,6 +57,7 @@ class Order(db.Model):
     subtotal = db.Column(db.Numeric(12, 2), nullable=True)
     shipping_fee = db.Column(db.Numeric(12, 2), default=0, nullable=False)
     discount_amt = db.Column(db.Numeric(12, 2), default=0, nullable=False)
+    discount_code = db.Column(db.String(50), nullable=True)  # Applied discount code
     grand_total = db.Column(db.Numeric(12, 2), nullable=False)
     total_amount = db.Column(db.Numeric(12, 2), nullable=False)
     
@@ -70,6 +72,7 @@ class Order(db.Model):
     def to_dict(self, include_relations=False):
         result = {
             'id': self.id,
+            'user_id': self.user_id,
             'order_code': self.order_code,
             'customer_name': self.customer_name,
             'phone': self.phone,

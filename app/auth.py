@@ -10,6 +10,9 @@ from app.db import get_session, close_session
 from app.models.user import User
 import uuid
 
+# Simple in-memory token blacklist (use Redis in production)
+BLACKLISTED_TOKENS = set()
+
 def hash_password(password):
     """Hash a password using bcrypt"""
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -20,9 +23,15 @@ def check_password(password, password_hash):
 
 def generate_access_token(user_id):
     """Generate JWT access token"""
+    expires_config = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)
+    if isinstance(expires_config, timedelta):
+        expires_seconds = int(expires_config.total_seconds())
+    else:
+        expires_seconds = expires_config
+        
     payload = {
         'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(seconds=current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)),
+        'exp': datetime.utcnow() + timedelta(seconds=expires_seconds),
         'iat': datetime.utcnow()
     }
     return jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
@@ -30,6 +39,10 @@ def generate_access_token(user_id):
 def decode_token(token):
     """Decode JWT token"""
     try:
+        # Check if token is blacklisted
+        if token in BLACKLISTED_TOKENS:
+            return None
+            
         payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
         return payload
     except jwt.ExpiredSignatureError:
@@ -37,8 +50,15 @@ def decode_token(token):
     except jwt.InvalidTokenError:
         return None
 
+def blacklist_token(token):
+    """Add token to blacklist"""
+    BLACKLISTED_TOKENS.add(token)
+
 def get_current_user():
-    """Get current user from JWT token"""
+    """Get current user from JWT token or session"""
+    from sqlalchemy.orm import joinedload
+    
+    # First, try JWT token authentication (for API)
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
@@ -46,12 +66,31 @@ def get_current_user():
         if payload:
             session_db = get_session()
             try:
-                user = session_db.query(User).filter(
+                user = session_db.query(User).options(joinedload(User.roles)).filter(
                     User.id == payload['user_id']
                 ).first()
+                if user:
+                    # Trigger loading of roles to avoid DetachedInstanceError
+                    _ = user.roles  # Access the relationship to load it
                 return user
             finally:
                 close_session(session_db)
+    
+    # Fallback to session-based authentication (for web UI)
+    user_id = session.get('user_id')
+    if user_id:
+        session_db = get_session()
+        try:
+            user = session_db.query(User).options(joinedload(User.roles)).filter(
+                User.id == user_id
+            ).first()
+            if user:
+                # Trigger loading of roles to avoid DetachedInstanceError
+                _ = user.roles  # Access the relationship to load it
+            return user
+        finally:
+            close_session(session_db)
+    
     return None
 
 def login_required(f):
@@ -65,7 +104,7 @@ def login_required(f):
     return decorated_function
 
 def admin_required(f):
-    """Decorator to require admin role"""
+    """Decorator to require admin role for API routes"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = get_current_user()
@@ -73,6 +112,21 @@ def admin_required(f):
             return jsonify({'error': 'Authentication required'}), 401
         if user.role_code != 'admin':
             return jsonify({'error': 'Admin access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required_web(f):
+    """Decorator to require admin role for web routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        from flask import flash, redirect, url_for
+        user = get_current_user()
+        if not user:
+            flash('Vui lòng đăng nhập để tiếp tục', 'error')
+            return redirect(url_for('site.login', next=request.url))
+        if user.role_code != 'admin':
+            flash('Bạn không có quyền truy cập trang này', 'error')
+            return redirect(url_for('site.home'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -125,13 +179,17 @@ def register_user(email, password, full_name, phone):
 
 def authenticate_user(email, password):
     """Authenticate user login"""
+    from sqlalchemy.orm import joinedload
+    
     session_db = get_session()
     try:
-        user = session_db.query(User).filter(
+        user = session_db.query(User).options(joinedload(User.roles)).filter(
             User.email == email
         ).first()
         
         if user and check_password(password, user.password_hash):
+            # Trigger loading of roles to avoid DetachedInstanceError
+            _ = user.roles  # Access the relationship to load it
             return user, None
         
         return None, "Invalid email or password"

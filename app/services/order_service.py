@@ -49,6 +49,7 @@ class OrderService:
             
             # Create order record
             order_data = {
+                'user_id': payload.get('user_id'),  # Add user_id from payload
                 'order_code': order_code,
                 'customer_name': customer['name'],
                 'phone': customer['phone'],
@@ -127,20 +128,35 @@ class OrderService:
             db.session.rollback()
             raise OrderError(f"Failed to create order: {str(e)}")
     
-    def get_order_by_code(self, order_code: str) -> Dict:
+    def get_order_by_code(self, order_code: str, user_id: str = None) -> Dict:
         """Get order details by order code"""
-        order = order_repo.get_by_code(order_code)
+        if user_id:
+            # Ensure user_id is string for consistent comparison
+            user_id = str(user_id)
+            # For authenticated users, only allow access to their own orders
+            order = order_repo.get_by_code_for_user(order_code, user_id)
+        else:
+            # For backward compatibility with admin or public access
+            order = order_repo.get_by_code(order_code)
+            
         if not order:
             raise OrderError(f"Order {order_code} not found")
         
         return self._format_order_detail_response(order)
     
-    def mock_pay(self, order_code: str) -> Dict:
+    def mock_pay(self, order_code: str, user_id: str = None) -> Dict:
         """Mark order as mock paid"""
         try:
             print(f"Starting mock_pay for order_code: {order_code}")
             
-            order = order_repo.get_by_code_for_update(order_code)
+            if user_id:
+                # Ensure user_id is string for consistent comparison
+                user_id = str(user_id)
+                # For authenticated users, ensure they own the order
+                order = order_repo.get_by_code_for_user(order_code, user_id)
+            else:
+                order = order_repo.get_by_code_for_update(order_code)
+                
             if not order:
                 print(f"Order {order_code} not found")
                 raise OrderError(f"Order {order_code} not found")
@@ -209,16 +225,26 @@ class OrderService:
             db.session.rollback()
             raise OrderError(f"Failed to update status: {str(e)}")
     
-    def search_orders(self, status: str = None, query: str = '', page: int = 1, per_page: int = 20) -> Tuple[List[Dict], int]:
+    def search_orders(self, status: str = None, query: str = '', page: int = 1, per_page: int = 20, user_id: str = None) -> Tuple[List[Dict], int]:
         """Search orders with filters"""
-        orders, total = order_repo.search_orders(status, query, page, per_page)
+        # Ensure user_id is string for consistent comparison
+        if user_id:
+            user_id = str(user_id)
+        orders, total = order_repo.search_orders(status, query, page, per_page, user_id)
         
         return [self._format_order_response(order) for order in orders], total
     
-    def cancel_order(self, order_code: str, note: str = None) -> Dict:
+    def cancel_order(self, order_code: str, note: str = None, user_id: str = None) -> Dict:
         """Cancel order if possible"""
         try:
-            order = order_repo.get_by_code_for_update(order_code)
+            if user_id:
+                # Ensure user_id is string for consistent comparison
+                user_id = str(user_id)
+                # For authenticated users, ensure they own the order
+                order = order_repo.get_by_code_for_user(order_code, user_id)
+            else:
+                order = order_repo.get_by_code_for_update(order_code)
+                
             if not order:
                 raise OrderError(f"Order {order_code} not found")
             
@@ -244,9 +270,12 @@ class OrderService:
             db.session.rollback()
             raise OrderError(f"Failed to cancel order: {str(e)}")
     
-    def get_orders_by_status(self, status: str, page: int = 1, per_page: int = 20) -> Tuple[List[Dict], int]:
+    def get_orders_by_status(self, status: str, page: int = 1, per_page: int = 20, user_id: str = None) -> Tuple[List[Dict], int]:
         """Get orders by status with pagination"""
-        orders, total = order_repo.get_orders_by_status(status, page, per_page)
+        # Ensure user_id is string for consistent comparison
+        if user_id:
+            user_id = str(user_id)
+        orders, total = order_repo.get_orders_by_status(status, page, per_page, user_id)
         
         return [self._format_order_response(order) for order in orders], total
     

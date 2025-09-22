@@ -73,7 +73,7 @@
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 {{ form.ward.label(class="form-label") }} <span class="text-danger">*</span>
-                                {{ form.ward(class="form-control") }}
+                                {{ form.ward(class="form-control", id="ward") }}
                                 {% if form.ward.errors %}
                                     <div class="text-danger">
                                         {% for error in form.ward.errors %}
@@ -85,7 +85,7 @@
                             
                             <div class="col-md-4 mb-3">
                                 {{ form.district.label(class="form-label") }} <span class="text-danger">*</span>
-                                {{ form.district(class="form-control") }}
+                                {{ form.district(class="form-control", id="district") }}
                                 {% if form.district.errors %}
                                     <div class="text-danger">
                                         {% for error in form.district.errors %}
@@ -97,7 +97,7 @@
                             
                             <div class="col-md-4 mb-3">
                                 {{ form.province.label(class="form-label") }} <span class="text-danger">*</span>
-                                {{ form.province(class="form-control") }}
+                                {{ form.province(class="form-control", id="province") }}
                                 {% if form.province.errors %}
                                     <div class="text-danger">
                                         {% for error in form.province.errors %}
@@ -168,12 +168,21 @@
                         <!-- Totals -->
                         <div class="d-flex justify-content-between mb-2">
                             <span>Tạm tính:</span>
-                            <span>{{ subtotal | vnd }}</span>
+                            <span id="subtotal">{{ subtotal | vnd }}</span>
                         </div>
                         
                         <div class="d-flex justify-content-between mb-2">
                             <span>Phí vận chuyển:</span>
                             <span id="shipping-fee">{{ shipping_fee | vnd }}</span>
+                        </div>
+                        
+                        <!-- Shipping Info -->
+                        <div id="shipping-info" class="mb-2">
+                            {% if shipping_fee == 0 %}
+                            <small class="text-success">🎉 Miễn phí vận chuyển!</small>
+                            {% else %}
+                            <small class="text-muted">Phí ship chuẩn - Giao hàng 1-3 ngày</small>
+                            {% endif %}
                         </div>
                         
                         {% if subtotal >= 500000 %}
@@ -220,12 +229,11 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Include our checkout.js -->
+<script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const provinceInput = document.querySelector('input[name="province"]');
-    const shippingFeeElement = document.getElementById('shipping-fee');
-    const grandTotalElement = document.getElementById('grand-total');
-    const subtotal = {{ subtotal }};
     const form = document.querySelector('form');
     
     // Check if user is logged in from data attribute
@@ -258,38 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Update shipping fee based on province
-    function updateShippingFee() {
-        const province = provinceInput.value;
-        let shippingFee = 30000; // Default shipping fee
-        
-        // Province-specific shipping fees (matching ShippingService)
-        const provinceFees = {
-            'Hà Nội': 25000,
-            'TP Hồ Chí Minh': 25000,
-            'Đà Nẵng': 30000,
-            'Hải Phòng': 30000,
-            'Cần Thơ': 35000
-        };
-        
-        if (province && provinceFees[province]) {
-            shippingFee = provinceFees[province];
-        }
-        
-        // Free shipping for orders >= 500k (matching ShippingService)
-        if (subtotal >= 500000) {
-            shippingFee = 0;
-        }
-        
-        const grandTotal = subtotal + shippingFee;
-        
-        shippingFeeElement.textContent = new Intl.NumberFormat('vi-VN').format(shippingFee) + '₫';
-        grandTotalElement.textContent = new Intl.NumberFormat('vi-VN').format(grandTotal) + '₫';
-    }
-    
-    provinceInput.addEventListener('input', updateShippingFee);
-    
-    // Form validation (reuse form variable from above)
+    // Form validation
     form.addEventListener('submit', function(e) {
         const requiredFields = form.querySelectorAll('input[required], select[required]');
         let isValid = true;
@@ -309,5 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+</script>
 </script>
 {% endblock %}

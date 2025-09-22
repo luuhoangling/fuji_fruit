@@ -1,0 +1,242 @@
+{% extends "admin/base.html" %}
+
+{% block page_title %}{{ 'Chỉnh sửa mã giảm giá' if discount else 'Tạo mã giảm giá mới' }}{% endblock %}
+{% block page_subtitle %}{{ 'Cập nhật thông tin mã giảm giá' if discount else 'Tạo mã giảm giá cho khách hàng' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card table-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-percent"></i> {{ 'Chỉnh sửa mã giảm giá' if discount else 'Tạo mã giảm giá mới' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="discountForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="code" class="form-label">Mã giảm giá *</label>
+                                <input type="text" class="form-control" id="code" name="code" 
+                                       value="{{ discount.code if discount else '' }}" 
+                                       placeholder="VD: SUMMER2024" required
+                                       {{ 'readonly' if discount else '' }}>
+                                <div class="form-text">Mã phải duy nhất và không chứa khoảng trắng</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Tên mã giảm giá *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ discount.name if discount else '' }}" 
+                                       placeholder="VD: Giảm giá mùa hè" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Mô tả</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" placeholder="Mô tả về chương trình giảm giá">{{ discount.description if discount else '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="discount_type" class="form-label">Loại giảm giá *</label>
+                                <select class="form-select" id="discount_type" name="discount_type" required onchange="toggleDiscountValue()">
+                                    <option value="percentage" {{ 'selected' if discount and discount.discount_type == 'percentage' else '' }}>Phần trăm (%)</option>
+                                    <option value="fixed" {{ 'selected' if discount and discount.discount_type == 'fixed' else '' }}>Số tiền cố định (VNĐ)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="discount_value" class="form-label">Giá trị giảm *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="discount_value" name="discount_value" 
+                                           value="{{ discount.discount_value if discount else '' }}" 
+                                           min="0" step="0.01" required>
+                                    <span class="input-group-text" id="discount_unit">%</span>
+                                </div>
+                                <div class="form-text" id="discount_hint">Nhập phần trăm từ 0-100</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="min_order_amount" class="form-label">Giá trị đơn hàng tối thiểu</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="min_order_amount" name="min_order_amount" 
+                                           value="{{ discount.min_order_amount if discount else '0' }}" 
+                                           min="0" step="1000">
+                                    <span class="input-group-text">VNĐ</span>
+                                </div>
+                                <div class="form-text">0 = không giới hạn</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_discount_amount" class="form-label">Số tiền giảm tối đa</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="max_discount_amount" name="max_discount_amount" 
+                                           value="{{ discount.max_discount_amount if discount else '' }}" 
+                                           min="0" step="1000">
+                                    <span class="input-group-text">VNĐ</span>
+                                </div>
+                                <div class="form-text">Để trống = không giới hạn</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="usage_limit" class="form-label">Số lần sử dụng tối đa</label>
+                                <input type="number" class="form-control" id="usage_limit" name="usage_limit" 
+                                       value="{{ discount.usage_limit if discount else '' }}" 
+                                       min="1">
+                                <div class="form-text">Để trống = không giới hạn</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="usage_limit_per_user" class="form-label">Số lần sử dụng/người</label>
+                                <input type="number" class="form-control" id="usage_limit_per_user" name="usage_limit_per_user" 
+                                       value="{{ discount.usage_limit_per_user if discount else '1' }}" 
+                                       min="1" required>
+                                <div class="form-text">Mỗi khách hàng có thể sử dụng bao nhiêu lần</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Ngày bắt đầu *</label>
+                                <input type="datetime-local" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ discount.start_date.strftime('%Y-%m-%dT%H:%M') if discount and discount.start_date else '' }}" 
+                                       required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">Ngày kết thúc *</label>
+                                <input type="datetime-local" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ discount.end_date.strftime('%Y-%m-%dT%H:%M') if discount and discount.end_date else '' }}" 
+                                       required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                   {{ 'checked' if not discount or discount.is_active else '' }}>
+                            <label class="form-check-label" for="is_active">
+                                Kích hoạt mã giảm giá
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.discounts') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Quay lại
+                        </a>
+                        <button type="submit" class="btn btn-custom">
+                            <i class="fas fa-save"></i> {{ 'Cập nhật' if discount else 'Tạo mã giảm giá' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDiscountValue() {
+    const discountType = document.getElementById('discount_type').value;
+    const unit = document.getElementById('discount_unit');
+    const hint = document.getElementById('discount_hint');
+    const input = document.getElementById('discount_value');
+    
+    if (discountType === 'percentage') {
+        unit.textContent = '%';
+        hint.textContent = 'Nhập phần trăm từ 0-100';
+        input.max = '100';
+        input.step = '0.01';
+    } else {
+        unit.textContent = 'VNĐ';
+        hint.textContent = 'Nhập số tiền giảm';
+        input.max = '';
+        input.step = '1000';
+    }
+}
+
+document.getElementById('discountForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {};
+    
+    // Convert form data to object
+    for (let [key, value] of formData.entries()) {
+        if (key === 'is_active') {
+            data[key] = true;
+        } else if (value !== '') {
+            data[key] = value;
+        }
+    }
+    
+    // Handle checkbox manually since it won't be in FormData if unchecked
+    if (!document.getElementById('is_active').checked) {
+        data['is_active'] = false;
+    }
+    
+    // Validate dates
+    const startDate = new Date(data.start_date);
+    const endDate = new Date(data.end_date);
+    
+    if (endDate <= startDate) {
+        alert('Ngày kết thúc phải sau ngày bắt đầu');
+        return;
+    }
+    
+    // Validate discount value
+    if (data.discount_type === 'percentage' && (data.discount_value < 0 || data.discount_value > 100)) {
+        alert('Phần trăm giảm giá phải từ 0 đến 100');
+        return;
+    }
+    
+    const url = '{{ url_for("admin.create_discount") }}';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Mã giảm giá đã được tạo thành công!');
+            window.location.href = '{{ url_for("admin.discounts") }}';
+        } else {
+            alert('Lỗi: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Có lỗi xảy ra: ' + error);
+    });
+});
+
+// Initialize on page load
+toggleDiscountValue();
+</script>
+{% endblock %}
