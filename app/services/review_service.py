@@ -9,20 +9,15 @@ from typing import Dict, List, Tuple
 class ReviewService:
     """Service for review management"""
     
-    def create_review(self, product_slug: str, user_name: str, rating: int, content: str) -> Dict:
+    def create_review(self, product_id: int, user_name: str, rating: int, content: str) -> Dict:
         """Create a new product review"""
-        # Get product by slug
-        product = product_repo.get_by_slug(product_slug)
-        if not product:
-            raise ValueError(f"Product with slug '{product_slug}' not found")
-        
         # Validate rating
         if not (1 <= rating <= 5):
             raise ValueError("Rating must be between 1 and 5")
         
         # Create review
-        review = review_repo.create(
-            product_id=product.id,
+        review = review_repo.create_review(
+            product_id=product_id,
             user_name=user_name,
             rating=rating,
             content=content

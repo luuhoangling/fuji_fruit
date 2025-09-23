@@ -18,6 +18,10 @@ class PricingService:
     
     def calculate_savings(self, regular_price: float, sale_price: float) -> dict:
         """Calculate savings amount and percentage"""
+        # Ensure both prices are float to avoid decimal/float operation errors
+        regular_price = float(regular_price)
+        sale_price = float(sale_price)
+        
         if sale_price >= regular_price:
             return {'amount': 0, 'percentage': 0}
         

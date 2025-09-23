@@ -42,8 +42,8 @@ class Product(BaseModel):
             'slug': self.slug,
             'short_desc': self.short_desc,
             'image_url': self.image_url,
-            'price': float(self.price),
-            'sale_price': float(self.sale_price) if self.sale_price else None,
+            'price': float(self.price) if self.price is not None else None,
+            'sale_price': float(self.sale_price) if self.sale_price is not None else None,
             'sale_start': self.sale_start.isoformat() if self.sale_start else None,
             'sale_end': self.sale_end.isoformat() if self.sale_end else None,
             'is_active': self.is_active
@@ -133,9 +133,9 @@ class ProductEffectivePrice(db.Model):
             'slug': self.slug,
             'short_desc': self.short_desc,
             'image_url': self.image_url,
-            'price': float(self.price),
-            'sale_price': float(self.sale_price) if self.sale_price else None,
-            'effective_price': float(self.effective_price),
+            'price': float(self.price) if self.price is not None else None,
+            'sale_price': float(self.sale_price) if self.sale_price is not None else None,
+            'effective_price': float(self.effective_price) if self.effective_price is not None else None,
             'is_active': self.is_active
         }
 
@@ -152,6 +152,6 @@ class ProductRating(db.Model):
     def to_dict(self):
         return {
             'product_id': self.product_id,
-            'avg_rating': float(self.avg_rating) if self.avg_rating else None,
+            'avg_rating': float(self.avg_rating) if self.avg_rating is not None else None,
             'review_count': self.review_count or 0
         }

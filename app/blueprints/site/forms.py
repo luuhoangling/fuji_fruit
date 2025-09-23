@@ -6,9 +6,9 @@ from app.db import get_db_session
 
 class ReviewForm(FlaskForm):
     """Form for submitting product reviews"""
-    user_name = StringField('Tên (tùy chọn)', 
+    user_name = StringField('Tên hiển thị', 
                            validators=[Optional(), Length(max=100)],
-                           render_kw={'placeholder': 'Để trống nếu muốn ẩn danh'})
+                           render_kw={'placeholder': 'Để trống để sử dụng tên mặc định'})
     
     rating = IntegerField('Đánh giá', 
                          validators=[DataRequired(), NumberRange(min=1, max=5, message='Đánh giá từ 1-5 sao')],

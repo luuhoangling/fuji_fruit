@@ -12,7 +12,7 @@ from app.blueprints.site.forms import ReviewForm, CheckoutForm, LoginForm, Regis
 from app.models.user import User
 from app.models.order import Order
 from app.db import get_session, close_session
-from app.auth import hash_password, check_password
+from app.auth import hash_password, check_password, get_current_user
 from sqlalchemy.orm import sessionmaker
 from app.db import get_db_session
 import uuid
@@ -37,7 +37,7 @@ def get_cart_from_session():
             product = product_repo.get_by_id(int(product_id))
             if product:
                 price = pricing_service.get_effective_price(product.id)
-                line_total = price * qty
+                line_total = float(price) * int(qty)  # Ensure both are proper numeric types
                 items.append({
                     'product_id': product.id,
                     'name': product.name,
@@ -126,8 +126,9 @@ def home():
                     product.original_price = float(product.price)
                     product.price = float(product.sale_price)
                 else:
-                    product.price = pricing_service.get_effective_price(product.id)
-                    product.original_price = product.price
+                    effective_price = pricing_service.get_effective_price(product.id)
+                    product.price = effective_price
+                    product.original_price = effective_price
         
         return render_template('site/home.html', 
                              sale_products=sale_products,
@@ -173,8 +174,12 @@ def category(slug):
         
         # Add pricing info
         for product in products:
-            product.price = pricing_service.get_effective_price(product.id)
-            product.original_price = product.price if not pricing_service.is_on_sale(product.id) else product.price_original
+            effective_price = pricing_service.get_effective_price(product.id)
+            product.price = effective_price
+            if pricing_service.is_on_sale(product.id):
+                product.original_price = float(product.price_original) if hasattr(product, 'price_original') else float(product.price)
+            else:
+                product.original_price = effective_price
         
         return render_template('site/category.html',
                              category=category,
@@ -220,8 +225,12 @@ def products():
         
         # Add pricing info
         for product in products:
-            product.price = pricing_service.get_effective_price(product.id)
-            product.original_price = product.price if not pricing_service.is_on_sale(product.id) else product.price_original
+            effective_price = pricing_service.get_effective_price(product.id)
+            product.price = effective_price
+            if pricing_service.is_on_sale(product.id):
+                product.original_price = float(product.price_original) if hasattr(product, 'price_original') else float(product.price)
+            else:
+                product.original_price = effective_price
         
         # Get all categories for filter
         categories = category_repo.get_all_active()
@@ -264,7 +273,7 @@ def product_detail(slug):
         # Get pricing info (don't modify the product object directly)
         effective_price = pricing_service.get_effective_price(product.id)
         is_on_sale = pricing_service.is_on_sale(product.id)
-        original_price = product.price if not is_on_sale else product.price
+        original_price = float(product.price)
         
         # Get stock info
         stock_info = stock_service.get_stock_info(product.id)
@@ -301,8 +310,8 @@ def product_detail(slug):
                 'name': random_product.name,
                 'slug': random_product.slug,
                 'image_url': random_product.image_url,
-                'price': random_product.price,
-                'sale_price': random_product.sale_price,
+                'price': float(random_product.price),
+                'sale_price': float(random_product.sale_price) if random_product.sale_price else None,
                 'effective_price': effective_price
             }
             random_products.append(product_data)
@@ -324,9 +333,16 @@ def product_detail(slug):
 @site_bp.route('/p/<slug>/reviews', methods=['POST'])
 def submit_review(slug):
     """Submit product review"""
+    # Check if user is logged in
+    current_user = get_current_user()
+    if not current_user:
+        flash('Bạn cần đăng nhập để có thể đánh giá sản phẩm', 'error')
+        return redirect(url_for('site.login', next=request.url))
+    
     db_session = get_db_session()
     try:
         product_repo = ProductRepository(db_session)
+        review_repo = ReviewRepository(db_session)
         review_service = ReviewService()
         
         product = product_repo.get_by_slug(slug)
@@ -337,17 +353,27 @@ def submit_review(slug):
         form = ReviewForm()
         if form.validate_on_submit():
             try:
-                review_service.create_review(
+                # Use logged in user's display name or form data
+                user_name = form.user_name.data if form.user_name.data else current_user.display_name
+                
+                # Use the repo instance with session directly
+                review = review_repo.create_review(
                     product_id=product.id,
-                    user_name=form.user_name.data or 'Khách hàng',
+                    user_name=user_name,
                     rating=form.rating.data,
                     content=form.content.data
                 )
+                db_session.commit()
                 flash('Đánh giá của bạn đã được gửi thành công!', 'success')
             except Exception as e:
-                flash('Có lỗi xảy ra khi gửi đánh giá', 'error')
+                db_session.rollback()
+                flash('Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.', 'error')
+                print(f"Review submission error: {e}")  # For debugging
         else:
-            flash('Vui lòng kiểm tra lại thông tin đánh giá', 'error')
+            # Display validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f'{error}', 'error')
         
         return redirect(url_for('site.product_detail', slug=slug) + '#reviews')
     finally:
