@@ -32,8 +32,13 @@
                 {% if session.user_id %}
                     <!-- User is logged in -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ session.user_name or 'User' }}
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            {% if current_user %}
+                                <i class="{{ current_user|avatar_icon }} me-2" style="font-size: 2rem; color: #6c757d;"></i>
+                            {% else %}
+                                <i class="bi bi-person-circle me-2"></i>
+                            {% endif %}
+                            {{ session.user_name or 'User' }}
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('site.profile') }}">

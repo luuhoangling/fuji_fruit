@@ -3,8 +3,8 @@ Admin views for management functionality
 """
 from flask import render_template, request, jsonify, redirect, url_for, flash, session
 from app.blueprints.admin import admin_bp
-from app.auth import admin_required_web as admin_required, get_current_user
-from app.models import Product, Category, Order, User
+from app.auth import admin_required_web as admin_required, get_current_user, hash_password
+from app.models import Product, Category, Order, User, Role
 from app.models.product import ProductStock
 from app.repositories.product_repo import ProductRepository
 from app.repositories.category_repo import CategoryRepository 
@@ -716,5 +716,212 @@ def sale_statistics():
         
     except Exception as e:
         return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)
+
+
+# ==================== USER MANAGEMENT ====================
+
+@admin_bp.route('/users')
+@admin_required
+def users():
+    """List all users"""
+    session_db = get_session()
+    try:
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        search = request.args.get('search', '')
+        role_filter = request.args.get('role', '')
+        
+        # Build query
+        query = session_db.query(User)
+        
+        # Apply search filter
+        if search:
+            query = query.filter(
+                db.or_(
+                    User.username.ilike(f'%{search}%'),
+                    User.email.ilike(f'%{search}%'),
+                    User.full_name.ilike(f'%{search}%')
+                )
+            )
+        
+        # Apply role filter
+        if role_filter:
+            from app.models.user import user_roles
+            query = query.join(user_roles).join(Role).filter(Role.code == role_filter)
+        
+        # Get paginated results
+        pagination = query.order_by(User.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        users_list = pagination.items
+        
+        # Get available roles for filter
+        roles = session_db.query(Role).all()
+        
+        return render_template('admin/users.html',
+                             users=users_list,
+                             pagination=pagination,
+                             search=search,
+                             role_filter=role_filter,
+                             roles=roles)
+        
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/users/<int:user_id>')
+@admin_required
+def user_detail(user_id):
+    """User detail page"""
+    session_db = get_session()
+    try:
+        user = session_db.query(User).get(user_id)
+        if not user:
+            flash('Không tìm thấy người dùng', 'error')
+            return redirect(url_for('admin.users'))
+        
+        # Get user's orders
+        orders = session_db.query(Order).filter(Order.user_id == user_id).order_by(
+            Order.created_at.desc()
+        ).limit(10).all()
+        
+        # Get available roles
+        roles = session_db.query(Role).all()
+        
+        return render_template('admin/user_detail.html',
+                             user=user,
+                             orders=orders,
+                             roles=roles)
+        
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_user(user_id):
+    """Edit user information"""
+    session_db = get_session()
+    try:
+        user = session_db.query(User).get(user_id)
+        if not user:
+            flash('Không tìm thấy người dùng', 'error')
+            return redirect(url_for('admin.users'))
+        
+        if request.method == 'POST':
+            # Get form data
+            username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip()
+            full_name = request.form.get('full_name', '').strip()
+            phone = request.form.get('phone', '').strip()
+            role_ids = request.form.getlist('roles')
+            
+            # Validate required fields
+            if not username:
+                flash('Tên đăng nhập không được để trống', 'error')
+                return redirect(request.url)
+            
+            # Check username uniqueness (exclude current user)
+            existing_user = session_db.query(User).filter(
+                User.username == username,
+                User.id != user_id
+            ).first()
+            if existing_user:
+                flash('Tên đăng nhập đã tồn tại', 'error')
+                return redirect(request.url)
+            
+            # Check email uniqueness if provided (exclude current user)
+            if email:
+                existing_email = session_db.query(User).filter(
+                    User.email == email,
+                    User.id != user_id
+                ).first()
+                if existing_email:
+                    flash('Email đã tồn tại', 'error')
+                    return redirect(request.url)
+            
+            # Update user info
+            user.username = username
+            user.email = email if email else None
+            user.full_name = full_name if full_name else None
+            user.phone = phone if phone else None
+            
+            # Update roles
+            user.roles = []
+            if role_ids:
+                roles = session_db.query(Role).filter(Role.id.in_(role_ids)).all()
+                user.roles = roles
+            else:
+                # Default to customer role if no roles selected
+                customer_role = session_db.query(Role).filter(Role.code == 'customer').first()
+                if customer_role:
+                    user.roles = [customer_role]
+            
+            session_db.commit()
+            flash('Cập nhật thông tin người dùng thành công', 'success')
+            return redirect(url_for('admin.user_detail', user_id=user_id))
+        
+        # GET request - show edit form
+        roles = session_db.query(Role).all()
+        
+        return render_template('admin/edit_user.html',
+                             user=user,
+                             roles=roles)
+        
+    except Exception as e:
+        session_db.rollback()
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+        return redirect(url_for('admin.users'))
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/users/<int:user_id>/change-password', methods=['GET', 'POST'])
+@admin_required
+def change_user_password(user_id):
+    """Change user password"""
+    session_db = get_session()
+    try:
+        user = session_db.query(User).get(user_id)
+        if not user:
+            flash('Không tìm thấy người dùng', 'error')
+            return redirect(url_for('admin.users'))
+        
+        if request.method == 'POST':
+            # Get form data
+            new_password = request.form.get('new_password', '').strip()
+            confirm_password = request.form.get('confirm_password', '').strip()
+            
+            # Validate passwords
+            if not new_password:
+                flash('Mật khẩu mới không được để trống', 'error')
+                return redirect(request.url)
+            
+            if len(new_password) < 6:
+                flash('Mật khẩu mới phải có ít nhất 6 ký tự', 'error')
+                return redirect(request.url)
+            
+            if new_password != confirm_password:
+                flash('Xác nhận mật khẩu không khớp', 'error')
+                return redirect(request.url)
+            
+            # Update password
+            user.password_hash = hash_password(new_password)
+            session_db.commit()
+            
+            flash('Đổi mật khẩu thành công', 'success')
+            return redirect(url_for('admin.user_detail', user_id=user_id))
+        
+        # GET request - show change password form
+        return render_template('admin/change_password.html', user=user)
+        
+    except Exception as e:
+        session_db.rollback()
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+        return redirect(url_for('admin.users'))
     finally:
         close_session(session_db)

@@ -813,6 +813,117 @@ def profile():
         db_session.close()
 
 
+@site_bp.route('/profile/edit', methods=['GET', 'POST'])
+def edit_profile():
+    """Edit user profile"""
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để chỉnh sửa thông tin', 'warning')
+        return redirect(url_for('site.login'))
+    
+    db_session = get_db_session()
+    try:
+        user = db_session.query(User).filter_by(id=session['user_id']).first()
+        if not user:
+            session.clear()
+            flash('Phiên đăng nhập đã hết hạn', 'warning')
+            return redirect(url_for('site.login'))
+        
+        if request.method == 'POST':
+            # Get form data
+            full_name = request.form.get('full_name', '').strip()
+            email = request.form.get('email', '').strip()
+            phone = request.form.get('phone', '').strip()
+            
+            # Validate email uniqueness if provided and changed
+            if email and email != user.email:
+                existing_email = db_session.query(User).filter(
+                    User.email == email,
+                    User.id != user.id
+                ).first()
+                if existing_email:
+                    flash('Email này đã được sử dụng bởi tài khoản khác', 'error')
+                    return render_template('site/edit_profile.html', user=user)
+            
+            # Update user info
+            user.full_name = full_name if full_name else None
+            user.email = email if email else None
+            user.phone = phone if phone else None
+            
+            db_session.commit()
+            
+            # Update session with new display name
+            session['user_name'] = user.display_name
+            
+            flash('Cập nhật thông tin thành công!', 'success')
+            return redirect(url_for('site.profile'))
+        
+        # GET request - show edit form
+        return render_template('site/edit_profile.html', user=user)
+        
+    except Exception as e:
+        db_session.rollback()
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+        return redirect(url_for('site.profile'))
+    finally:
+        db_session.close()
+
+
+@site_bp.route('/change-password', methods=['GET', 'POST'])
+def change_password():
+    """Change user password"""
+    if 'user_id' not in session:
+        flash('Vui lòng đăng nhập để tiếp tục', 'error')
+        return redirect(url_for('site.login'))
+    
+    db_session = get_session()
+    try:
+        user = db_session.query(User).get(session['user_id'])
+        if not user:
+            flash('Không tìm thấy thông tin người dùng', 'error')
+            return redirect(url_for('site.login'))
+        
+        if request.method == 'POST':
+            # Get form data
+            current_password = request.form.get('current_password', '').strip()
+            new_password = request.form.get('new_password', '').strip()
+            confirm_password = request.form.get('confirm_password', '').strip()
+            
+            # Validate current password
+            if not current_password or not check_password(current_password, user.password_hash):
+                flash('Mật khẩu hiện tại không đúng', 'error')
+                return render_template('site/change_password.html', user=user)
+            
+            # Validate new password
+            if not new_password:
+                flash('Mật khẩu mới không được để trống', 'error')
+                return render_template('site/change_password.html', user=user)
+            
+            if len(new_password) < 6:
+                flash('Mật khẩu mới phải có ít nhất 6 ký tự', 'error')
+                return render_template('site/change_password.html', user=user)
+            
+            if new_password != confirm_password:
+                flash('Xác nhận mật khẩu không khớp', 'error')
+                return render_template('site/change_password.html', user=user)
+            
+            # Update password
+            user.password_hash = hash_password(new_password)
+            db_session.commit()
+            
+            flash('Đổi mật khẩu thành công', 'success')
+            return redirect(url_for('site.profile'))
+        
+        # GET request - show change password form
+        return render_template('site/change_password.html', user=user)
+        
+    except Exception as e:
+        db_session.rollback()
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+        return redirect(url_for('site.profile'))
+    finally:
+        db_session.close()
+
+
 @site_bp.route('/orders/<order_code>/confirm-transfer', methods=['POST'])
 @csrf.exempt
 def confirm_transfer(order_code):

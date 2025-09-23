@@ -13,6 +13,15 @@
                     </h4>
                 </div>
                 <div class="card-body">
+                    <!-- Avatar Section -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <i class="{{ user|avatar_icon }} mb-3" style="font-size: 7.5rem; color: #6c757d;"></i>
+                            <h5>{{ user.display_name }}</h5>
+                            <p class="text-muted">@{{ user.username }}</p>
+                        </div>
+                    </div>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -46,29 +55,6 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Trạng thái tài khoản:</label>
-                                <p class="form-control-plaintext">
-                                    {% if user.is_active %}
-                                        <span class="badge bg-success">Hoạt động</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Vô hiệu hóa</span>
-                                    {% endif %}
-                                    
-                                    {% if user.email_verified %}
-                                        <span class="badge bg-info">Đã xác thực</span>
-                                    {% else %}
-                                        <span class="badge bg-warning">Chưa xác thực</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
                                 <label class="form-label fw-bold">Ngày tham gia:</label>
                                 <p class="form-control-plaintext">
                                     {{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else 'N/A' }}
@@ -86,12 +72,12 @@
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <button class="btn btn-warning" onclick="alert('Tính năng chỉnh sửa thông tin sẽ được cập nhật sau!')">
+                        <a href="{{ url_for('site.edit_profile') }}" class="btn btn-warning">
                             <i class="bi bi-pencil"></i> Chỉnh sửa thông tin
-                        </button>
-                        <button class="btn btn-secondary" onclick="alert('Tính năng đổi mật khẩu sẽ được cập nhật sau!')">
+                        </a>
+                        <a href="{{ url_for('site.change_password') }}" class="btn btn-warning">
                             <i class="bi bi-key"></i> Đổi mật khẩu
-                        </button>
+                        </a>
                         <a href="{{ url_for('site.home') }}" class="btn btn-primary">
                             <i class="bi bi-house"></i> Về trang chủ
                         </a>

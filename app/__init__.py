@@ -35,6 +35,24 @@ def create_app(config_name=None):
             return "0₫"
         return f"{int(amount):,}₫".replace(',', '.')
     
+    @app.template_filter('avatar_icon')
+    def get_avatar_icon(user):
+        """Get avatar icon for user"""
+        from app.utils.avatar_utils import get_default_avatar_icon
+        return get_default_avatar_icon(user.id, user.username)
+    
+    @app.template_filter('avatar_color')
+    def get_avatar_color(user):
+        """Get avatar color for user"""
+        from app.utils.avatar_utils import get_default_avatar_color
+        return get_default_avatar_color(user.id, user.username)
+    
+    @app.template_filter('avatar_initials')
+    def get_avatar_initials(user):
+        """Get avatar initials for user"""
+        from app.utils.avatar_utils import get_avatar_initials
+        return get_avatar_initials(user.full_name, user.username)
+    
     # Add context processor for current user
     @app.context_processor
     def inject_current_user():

@@ -671,3 +671,73 @@ footer {
         border-color: #6c757d;
     }
 }
+
+/* Custom Avatar Colors and Gradients */
+.bg-purple {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.bg-orange {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+.bg-orange-fire {
+    background: linear-gradient(135deg, #ff9a56 0%, #ff6b35 100%) !important;
+}
+
+.bg-orange-sunset {
+    background: linear-gradient(135deg, #ff8a80 0%, #ff7043 100%) !important;
+}
+
+.bg-orange-autumn {
+    background: linear-gradient(135deg, #ffab40 0%, #ff8f00 100%) !important;
+}
+
+.bg-teal {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+.bg-pink {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+}
+
+.bg-indigo {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+}
+
+.bg-gradient-1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.bg-gradient-2 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+.bg-gradient-3 {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+/* Avatar hover effects */
+.avatar-hover {
+    transition: transform 0.2s ease-in-out;
+}
+
+.avatar-hover:hover {
+    transform: scale(1.05);
+}
+
+/* Navbar avatar alignment fix */
+.navbar .dropdown-toggle.d-flex {
+    align-items: center;
+}
+
+/* User profile enhancements */
+.profile-avatar {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+.profile-avatar:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    transform: translateY(-2px);
+}
