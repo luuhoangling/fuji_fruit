@@ -83,10 +83,8 @@ def can_mark_received_by_admin(order):
 
 def can_confirm_received_by_user(order):
     """Check if user can confirm order receipt"""
-    # User can confirm receipt directly when status is fulfilled
-    # No need to wait for admin to mark as delivered (transfer_confirmed)
-    return (order.status == 'fulfilled' and 
-            not (order.payment_method == 'COD' and order.payment_status == 'mock_paid'))
+    # User can confirm receipt when status is fulfilled and not already completed
+    return (order.status == 'fulfilled')
 
 
 def can_pay_order(order):

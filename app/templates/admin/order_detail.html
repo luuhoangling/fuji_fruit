@@ -95,13 +95,13 @@
                             <tr>
                                 <td>
                                     <strong>{{ item.product_name }}</strong>
-                                    {% if item.product_sku %}
-                                    <br><small class="text-muted">SKU: {{ item.product_sku }}</small>
+                                    {% if item.product and item.product.sku %}
+                                    <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
                                     {% endif %}
                                 </td>
-                                <td>{{ "{:,.0f}".format(item.price) }} VNĐ</td>
-                                <td>{{ item.quantity }}</td>
-                                <td><strong>{{ "{:,.0f}".format(item.price * item.quantity) }} VNĐ</strong></td>
+                                <td>{{ "{:,.0f}".format(item.unit_price) if item.unit_price else 'N/A' }} VNĐ</td>
+                                <td>{{ item.qty }}</td>
+                                <td><strong>{{ "{:,.0f}".format(item.line_total) if item.line_total else 'N/A' }} VNĐ</strong></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -166,31 +166,19 @@
             </div>
             <div class="card-body">
                 <table class="table table-borderless">
-                    {% if order.amounts.subtotal %}
+                    {% if order.subtotal %}
                     <tr>
                         <td>Tạm tính:</td>
-                        <td class="text-end">{{ "{:,.0f}".format(order.amounts.subtotal) }} VNĐ</td>
+                        <td class="text-end">{{ "{:,.0f}".format(order.subtotal) if order.subtotal else '0' }} VNĐ</td>
                     </tr>
                     {% endif %}
                     <tr>
                         <td>Phí ship:</td>
-                        <td class="text-end">{{ "{:,.0f}".format(order.amounts.shipping_fee) }} VNĐ</td>
+                        <td class="text-end">{{ "{:,.0f}".format(order.shipping_fee) if order.shipping_fee else '0' }} VNĐ</td>
                     </tr>
-                    {% if order.amounts.discount > 0 %}
-                    <tr>
-                        <td>Giảm giá:</td>
-                        <td class="text-end text-success">-{{ "{:,.0f}".format(order.amounts.discount) }} VNĐ</td>
-                    </tr>
-                    {% endif %}
-                    {% if order.discount_code %}
-                    <tr>
-                        <td>Mã giảm giá:</td>
-                        <td class="text-end"><span class="badge bg-success">{{ order.discount_code }}</span></td>
-                    </tr>
-                    {% endif %}
                     <tr class="border-top">
                         <td><strong>Tổng cộng:</strong></td>
-                        <td class="text-end"><strong class="text-primary">{{ "{:,.0f}".format(order.amounts.grand_total) }} VNĐ</strong></td>
+                        <td class="text-end"><strong class="text-primary">{{ "{:,.0f}".format(order.grand_total) if order.grand_total else '0' }} VNĐ</strong></td>
                     </tr>
                 </table>
             </div>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 22, 2025 at 05:28 PM
+-- Generation Time: Sep 23, 2025 at 05:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -107,9 +107,9 @@ CREATE TABLE `orders` (
   `province` varchar(100) DEFAULT NULL,
   `district` varchar(100) DEFAULT NULL,
   `ward` varchar(100) DEFAULT NULL,
-  `payment_method` enum('COD','MOCK_TRANSFER') NOT NULL DEFAULT 'COD',
-  `payment_status` enum('unpaid','mock_paid') NOT NULL DEFAULT 'unpaid',
-  `status` enum('pending','confirmed','fulfilled','cancelled') NOT NULL DEFAULT 'pending',
+  `payment_method` enum('COD','BANK_TRANSFER','MOCK_TRANSFER') NOT NULL DEFAULT 'COD',
+  `payment_status` enum('unpaid','paid','transfer_confirmed','mock_paid') NOT NULL DEFAULT 'unpaid',
+  `status` enum('pending_payment','waiting_admin_confirmation','shipping','delivered','completed','cancelled','pending','confirmed','fulfilled') NOT NULL DEFAULT 'pending_payment',
   `subtotal` decimal(12,2) DEFAULT NULL,
   `shipping_fee` decimal(12,2) NOT NULL DEFAULT 0.00,
   `discount_amt` decimal(12,2) NOT NULL DEFAULT 0.00,
@@ -126,21 +126,8 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `order_code`, `customer_name`, `phone`, `address`, `province`, `district`, `ward`, `payment_method`, `payment_status`, `status`, `subtotal`, `shipping_fee`, `discount_amt`, `discount_code`, `grand_total`, `total_amount`, `created_at`, `transfer_confirmed`, `transfer_confirmed_at`) VALUES
-(10, '3', 'FJ-ALT2P2', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'COD', 'unpaid', 'cancelled', 59000.00, 30000.00, 0.00, NULL, 89000.00, 89000.00, '2025-09-20 11:05:20', 0, NULL),
-(11, '3', 'FJ-BVFHIS', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'MOCK_TRANSFER', 'mock_paid', 'cancelled', 149000.00, 30000.00, 0.00, NULL, 179000.00, 179000.00, '2025-09-20 11:24:36', 0, NULL),
-(12, '3', 'FJ-6B6X4N', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'COD', 'unpaid', 'fulfilled', 488000.00, 30000.00, 0.00, NULL, 518000.00, 518000.00, '2025-09-20 11:30:20', 0, NULL),
-(13, '3', 'FJ-M385T3', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'COD', 'unpaid', 'fulfilled', 59000.00, 30000.00, 0.00, NULL, 89000.00, 89000.00, '2025-09-20 11:39:43', 0, NULL),
-(14, '3', 'FJ-SKJPEB', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'COD', 'unpaid', 'cancelled', 197000.00, 30000.00, 0.00, NULL, 227000.00, 227000.00, '2025-09-20 11:53:57', 0, NULL),
-(15, '3', 'FJ-X3RN8P', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'MOCK_TRANSFER', 'unpaid', 'cancelled', 976000.00, 0.00, 0.00, NULL, 976000.00, 976000.00, '2025-09-20 14:11:03', 0, NULL),
-(16, '5', 'FJ-LHMXKS', 'Nguyễn Văn B', '0888666868', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '1', '1', 'COD', 'unpaid', 'fulfilled', 197000.00, 30000.00, 0.00, NULL, 227000.00, 227000.00, '2025-09-20 14:23:20', 0, NULL),
-(17, '5', 'FJ-RY9IOL', 'Nguyễn Văn B', '0888666868', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '123123', '123', 'COD', 'unpaid', 'fulfilled', 2000000.00, 0.00, 0.00, NULL, 2000000.00, 2000000.00, '2025-09-20 14:33:52', 0, NULL),
-(18, '5', 'FJ-III401', 'Nguyễn Văn B', '0888666868', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', '123123', '123', 'MOCK_TRANSFER', 'mock_paid', 'cancelled', 142000.00, 30000.00, 0.00, NULL, 172000.00, 172000.00, '2025-09-20 14:37:55', 0, NULL),
-(19, '6', 'FJ-7M9Y5L', 'Nguyễn Văn C', '0888666866', '123 ABC', 'ABC', 'ABC', 'ABC', 'MOCK_TRANSFER', 'mock_paid', 'cancelled', 687000.00, 0.00, 0.00, NULL, 687000.00, 687000.00, '2025-09-20 14:46:50', 0, NULL),
-(20, '3', 'FJ-49GKIS', 'Nguyễn Văn A', '0888666888', '123 ABC', 'ABC', 'ABC', 'ABC', 'COD', 'unpaid', 'cancelled', 144000.00, 30000.00, 0.00, NULL, 174000.00, 174000.00, '2025-09-22 14:30:43', 0, NULL),
-(21, '5', 'FJ-TJRPB7', 'Nguyễn Văn B', '0888666868', '123 ABC', 'ABC', 'ABC', 'ABC', '', '', '', 59000.00, 30000.00, 0.00, NULL, 89000.00, 89000.00, '2025-09-22 15:09:42', 1, '2025-09-22 15:09:42'),
-(22, '3', 'FJ-PXE8ZG', 'Nguyễn Văn A', '0888666888', '123 ABC', 'ABC', 'ABC', 'ABC', 'COD', 'unpaid', '', 142000.00, 30000.00, 0.00, NULL, 172000.00, 172000.00, '2025-09-22 15:21:59', 0, NULL),
-(23, '3', 'FJ-FGMH4I', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', 'ABC', 'ABC', '', '', '', 142000.00, 30000.00, 0.00, NULL, 172000.00, 172000.00, '2025-09-22 15:23:20', 1, '2025-09-22 15:23:20'),
-(24, '3', 'FJ-582P1Q', 'Nguyễn Văn A', '0888666888', 'xóm Nà Chú, xã Linh Thông, huyện Định Hóa', 'Thai Nguyen', 'ABC', 'ABC', '', '', '', 142000.00, 30000.00, 0.00, NULL, 172000.00, 172000.00, '2025-09-22 15:27:30', 1, '2025-09-22 15:27:30');
+(29, '3', 'FJ-GDNB1X', 'Nguyễn Văn A', '0888666888', '123', '123', '123', '123', 'COD', 'mock_paid', 'fulfilled', 488000.00, 30000.00, 0.00, NULL, 518000.00, 518000.00, '2025-09-23 15:03:14', 0, NULL),
+(30, '3', 'FJ-AU7LZP', 'Nguyễn Văn A', '0888666888', '123', '123', '123', '123', 'COD', 'unpaid', 'cancelled', 142000.00, 0.00, 0.00, NULL, 142000.00, 142000.00, '2025-09-23 15:23:18', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -151,7 +138,7 @@ INSERT INTO `orders` (`id`, `user_id`, `order_code`, `customer_name`, `phone`, `
 CREATE TABLE `order_events` (
   `id` bigint(20) NOT NULL,
   `order_id` bigint(20) NOT NULL,
-  `event_type` enum('placed','mock_paid','confirmed','fulfilled','cancelled','restocked') NOT NULL,
+  `event_type` enum('placed','payment_confirmed','admin_confirmed','shipping_started','delivered','completed','cancelled','restocked','mock_paid','confirmed','fulfilled','paid') NOT NULL,
   `note` varchar(255) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -161,46 +148,9 @@ CREATE TABLE `order_events` (
 --
 
 INSERT INTO `order_events` (`id`, `order_id`, `event_type`, `note`, `created_at`) VALUES
-(12, 10, 'placed', 'Order placed', '2025-09-20 11:05:20'),
-(13, 10, 'restocked', 'Restored 1 units of Cam xoàn loại 1', '2025-09-20 11:20:33'),
-(14, 10, 'cancelled', 'không thích', '2025-09-20 11:20:33'),
-(15, 11, 'placed', 'Order placed', '2025-09-20 11:24:36'),
-(16, 11, 'mock_paid', 'User marked as paid', '2025-09-20 11:24:41'),
-(17, 11, 'confirmed', 'Auto-confirm after mock pay', '2025-09-20 11:24:42'),
-(18, 11, 'restocked', 'Restored 1 units of Dưa lê Hàn Quốc', '2025-09-20 11:25:23'),
-(19, 11, 'cancelled', 'k thic', '2025-09-20 11:25:23'),
-(20, 12, 'placed', 'Order placed', '2025-09-20 11:30:20'),
-(21, 13, 'placed', 'Order placed', '2025-09-20 11:39:43'),
-(22, 14, 'placed', 'Order placed', '2025-09-20 11:53:57'),
-(23, 14, 'restocked', 'Restored 1 units of Nho đỏ Mỹ', '2025-09-20 11:54:02'),
-(24, 14, 'cancelled', 'Đơn hàng được hủy từ trạng thái pending', '2025-09-20 11:54:02'),
-(25, 12, 'confirmed', 'Đơn hàng chuyển từ pending sang confirmed', '2025-09-20 14:06:59'),
-(26, 13, 'fulfilled', 'Đơn hàng chuyển từ pending sang fulfilled', '2025-09-20 14:09:26'),
-(27, 12, 'fulfilled', 'Đơn hàng chuyển từ confirmed sang fulfilled', '2025-09-20 14:09:36'),
-(28, 15, 'placed', 'Order placed', '2025-09-20 14:11:03'),
-(29, 15, 'restocked', 'Restored 2 units of Cherry Canada', '2025-09-20 14:16:14'),
-(30, 15, 'cancelled', 'Test cancel', '2025-09-20 14:16:14'),
-(31, 16, 'placed', 'Order placed', '2025-09-20 14:23:20'),
-(32, 16, 'fulfilled', 'Đơn hàng chuyển từ pending sang fulfilled', '2025-09-20 14:26:20'),
-(33, 17, 'placed', 'Order placed', '2025-09-20 14:33:52'),
-(34, 17, 'fulfilled', 'Đơn hàng chuyển từ pending sang fulfilled', '2025-09-20 14:37:04'),
-(35, 18, 'placed', 'Order placed', '2025-09-20 14:37:55'),
-(36, 18, 'mock_paid', 'User marked as paid', '2025-09-20 14:37:58'),
-(37, 18, 'confirmed', 'Auto-confirm after mock pay', '2025-09-20 14:37:58'),
-(38, 18, 'restocked', 'Restored 1 units of Nho đen sữa Đài Loan', '2025-09-20 14:38:27'),
-(39, 18, 'cancelled', 'Đơn hàng được hủy từ trạng thái confirmed', '2025-09-20 14:38:27'),
-(40, 19, 'placed', 'Order placed', '2025-09-20 14:46:50'),
-(41, 19, 'mock_paid', 'User marked as paid', '2025-09-20 14:47:20'),
-(42, 19, 'confirmed', 'Auto-confirm after mock pay', '2025-09-20 14:47:20'),
-(43, 19, 'restocked', 'Restored 3 units of Cam vàng Úc', '2025-09-20 14:48:04'),
-(44, 19, 'cancelled', 'k thich', '2025-09-20 14:48:04'),
-(45, 20, 'placed', 'Order placed', '2025-09-22 14:30:43'),
-(46, 20, 'restocked', 'Restored 1 units of Chà là Thái Lan', '2025-09-22 14:53:36'),
-(47, 20, 'cancelled', 'Đơn hàng được hủy từ trạng thái pending', '2025-09-22 14:53:36'),
-(48, 21, 'placed', 'Order placed', '2025-09-22 15:09:42'),
-(49, 22, 'placed', 'Order placed', '2025-09-22 15:21:59'),
-(50, 23, 'placed', 'Order placed', '2025-09-22 15:23:20'),
-(51, 24, 'placed', 'Order placed', '2025-09-22 15:27:30');
+(57, 29, 'placed', 'Order placed', '2025-09-23 15:03:14'),
+(58, 30, 'placed', 'Order placed', '2025-09-23 15:23:18'),
+(59, 30, 'cancelled', 'Đơn hàng chuyển từ waiting_admin_confirmation sang cancelled', '2025-09-23 15:23:29');
 
 -- --------------------------------------------------------
 
@@ -223,21 +173,8 @@ CREATE TABLE `order_items` (
 --
 
 INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `product_name`, `unit_price`, `qty`, `line_total`) VALUES
-(10, 10, 197, 'Cam xoàn loại 1', 59000.00, 1, 59000.00),
-(11, 11, 198, 'Dưa lê Hàn Quốc', 149000.00, 1, 149000.00),
-(12, 12, 12, 'Cherry Canada', 488000.00, 1, 488000.00),
-(13, 13, 197, 'Cam xoàn loại 1', 59000.00, 1, 59000.00),
-(14, 14, 9, 'Nho đỏ Mỹ', 197000.00, 1, 197000.00),
-(15, 15, 12, 'Cherry Canada', 488000.00, 2, 976000.00),
-(16, 16, 9, 'Nho đỏ Mỹ', 197000.00, 1, 197000.00),
-(17, 17, 196, 'KHAY QUẢ BIẾU TẶNG – 13', 500000.00, 4, 2000000.00),
-(18, 18, 10, 'Nho đen sữa Đài Loan', 142000.00, 1, 142000.00),
-(19, 19, 108, 'Cam vàng Úc', 229000.00, 3, 687000.00),
-(20, 20, 11, 'Chà là Thái Lan', 144000.00, 1, 144000.00),
-(21, 21, 197, 'Cam xoàn loại 1', 59000.00, 1, 59000.00),
-(22, 22, 10, 'Nho đen sữa Đài Loan', 142000.00, 1, 142000.00),
-(23, 23, 10, 'Nho đen sữa Đài Loan', 142000.00, 1, 142000.00),
-(24, 24, 10, 'Nho đen sữa Đài Loan', 142000.00, 1, 142000.00);
+(29, 29, 12, 'Cherry Canada', 488000.00, 1, 488000.00),
+(30, 30, 10, 'Nho đen sữa Đài Loan', 142000.00, 1, 142000.00);
 
 -- --------------------------------------------------------
 
@@ -734,11 +671,11 @@ INSERT INTO `product_stock` (`product_id`, `qty_on_hand`, `updated_at`) VALUES
 (5, 18, '2025-09-20 15:39:24'),
 (6, 36, '2025-09-20 15:39:24'),
 (7, 10, '2025-09-20 15:39:24'),
-(8, 49, '2025-09-20 15:39:24'),
+(8, 48, '2025-09-23 16:34:40'),
 (9, 43, '2025-09-20 21:23:20'),
-(10, 9, '2025-09-22 22:27:30'),
-(11, 38, '2025-09-22 21:53:36'),
-(12, 32, '2025-09-20 21:16:14'),
+(10, 8, '2025-09-23 22:23:18'),
+(11, 37, '2025-09-23 16:43:59'),
+(12, 30, '2025-09-23 22:03:14'),
 (13, 17, '2025-09-20 15:43:42'),
 (14, 11, '2025-09-20 15:43:42'),
 (15, 56, '2025-09-20 15:43:42'),
@@ -922,7 +859,7 @@ INSERT INTO `product_stock` (`product_id`, `qty_on_hand`, `updated_at`) VALUES
 (193, 35, '2025-09-20 15:43:42'),
 (194, 23, '2025-09-20 15:43:42'),
 (195, 7, '2025-09-20 15:43:42'),
-(196, 12, '2025-09-20 21:33:52'),
+(196, 11, '2025-09-22 23:02:00'),
 (197, 55, '2025-09-22 22:09:42'),
 (198, 7, '2025-09-20 18:25:23');
 
@@ -998,8 +935,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `phone`, `password_hash`, `full_name`, `avatar_url`, `is_active`, `email_verified`, `last_login_at`, `created_at`, `updated_at`) VALUES
-(1, 'admin', 'admin@example.com', NULL, '$2b$12$l44/x5uss45943vM7PXZzuJER16kGddtMCxso2MyNg7RNSatHr.Fa', 'Administrator', NULL, 1, 1, '2025-09-22 15:27:39', '2025-09-19 14:06:38', '2025-09-22 15:27:39'),
-(3, 'nva', 'nva@tn.vn', '0888666888', '$2b$12$l44/x5uss45943vM7PXZzuJER16kGddtMCxso2MyNg7RNSatHr.Fa', 'Nguyễn Văn A', NULL, 1, 0, '2025-09-22 15:27:17', '2025-09-20 09:03:55', '2025-09-22 15:27:17'),
+(1, 'admin', 'admin@example.com', NULL, '$2b$12$l44/x5uss45943vM7PXZzuJER16kGddtMCxso2MyNg7RNSatHr.Fa', 'Administrator', NULL, 1, 1, '2025-09-23 15:03:49', '2025-09-19 14:06:38', '2025-09-23 15:03:49'),
+(3, 'nva', 'nva@tn.vn', '0888666888', '$2b$12$l44/x5uss45943vM7PXZzuJER16kGddtMCxso2MyNg7RNSatHr.Fa', 'Nguyễn Văn A', NULL, 1, 0, '2025-09-23 15:04:01', '2025-09-20 09:03:55', '2025-09-23 15:04:01'),
 (5, 'nvb', 'nvb@tn.vn', '0888666868', '$2b$12$mUAMmsCBROZLg/8PfqkGgeLMFEhF0f2cEdtwoDpY/.TCa6CcDJSU2', 'Nguyễn Văn B', NULL, 1, 0, '2025-09-22 15:00:54', '2025-09-20 14:22:59', '2025-09-22 15:00:54'),
 (6, 'nvc', 'nvc@tn.vn', '0888666866', '$2b$12$IZWs0KhQ5ZMt63A2G0JnVOiaqsNuQ.06TpQR9xbII1oDABvikgCAy', 'Nguyễn Văn C', NULL, 1, 0, '2025-09-20 14:45:12', '2025-09-20 14:45:06', '2025-09-20 14:45:12');
 
@@ -1230,19 +1167,19 @@ ALTER TABLE `discounts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `order_events`
 --
 ALTER TABLE `order_events`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `products`

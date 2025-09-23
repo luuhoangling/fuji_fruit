@@ -191,10 +191,29 @@ class ProductRepository(BaseRepository):
         products = []
         for product, qty_on_hand in results:
             product_dict = product.to_dict(include_relations=True)
+            
+            # Fix stock data
             product_dict['stock'] = {
                 'qty_on_hand': qty_on_hand or 0,
                 'in_stock': (qty_on_hand or 0) > 0
             }
+            
+            # Fix pricing - calculate effective price
+            base_price = float(product.price)
+            sale_price = float(product.sale_price) if product.sale_price else None
+            
+            # Check if sale is active
+            from datetime import datetime
+            now = datetime.utcnow()
+            is_sale_active = (product.sale_active and 
+                            sale_price is not None and 
+                            (product.sale_start is None or product.sale_start <= now) and
+                            (product.sale_end is None or product.sale_end >= now))
+            
+            product_dict['base_price'] = base_price
+            product_dict['effective_price'] = sale_price if is_sale_active else base_price
+            product_dict['is_on_sale'] = is_sale_active
+            
             products.append(product_dict)
         
         return products, total

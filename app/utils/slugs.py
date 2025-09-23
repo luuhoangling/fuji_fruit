@@ -87,3 +87,9 @@ class SlugGenerator:
             base_slug = "category"
         
         return SlugGenerator.ensure_unique_slug(base_slug, check_function)
+
+
+# Convenience function for simple slugify
+def slugify(text: str, max_length: int = 50) -> str:
+    """Convenience function to slugify text"""
+    return SlugGenerator.slugify(text, max_length)

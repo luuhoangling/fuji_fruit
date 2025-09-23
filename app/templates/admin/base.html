@@ -122,19 +122,14 @@
                         <i class="fas fa-tachometer-alt"></i> Dashboard
                     </a>
                     
-                    <a class="nav-link {% if 'product' in request.endpoint %}active{% endif %}" 
+                    <a class="nav-link {% if 'product' in request.endpoint and 'sale' not in request.endpoint %}active{% endif %}" 
                        href="{{ url_for('admin.products') }}">
                         <i class="fas fa-box"></i> Quản lý sản phẩm
                     </a>
                     
-                    <a class="nav-link {% if 'discount' in request.endpoint %}active{% endif %}" 
-                       href="{{ url_for('admin.discounts') }}">
-                        <i class="fas fa-percent"></i> Quản lý giảm giá
-                    </a>
-                    
-                    <a class="nav-link {% if 'shipping' in request.endpoint %}active{% endif %}" 
-                       href="{{ url_for('admin.shipping_rates') }}">
-                        <i class="fas fa-truck"></i> Quản lý phí ship
+                    <a class="nav-link {% if 'product-sales' in request.endpoint %}active{% endif %}" 
+                       href="{{ url_for('admin.product_sales') }}">
+                        <i class="fas fa-tags"></i> Khuyến mãi sản phẩm
                     </a>
                     
                     <a class="nav-link {% if 'order' in request.endpoint %}active{% endif %}" 

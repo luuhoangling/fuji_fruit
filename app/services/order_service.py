@@ -6,7 +6,6 @@ from datetime import datetime
 from app.repositories.order_repo import order_repo
 from app.repositories.product_repo import product_repo
 from app.services.pricing_service import pricing_service
-from app.services.shipping_service import shipping_service
 from app.services.stock_service import stock_service, OutOfStockError
 from app.models.order import PaymentMethod, PaymentStatus, OrderStatus, EventType
 from app.extensions import db
@@ -117,18 +116,17 @@ class OrderService:
                     'line_total': line_total
                 })
             
-            # Calculate shipping
-            shipping_fee = shipping_service.compute_shipping(subtotal, customer.get('province'))
+            # No shipping fee calculation
+            shipping_fee = 0
             
             # Calculate totals
-            discount_amt = 0  # No discounts for now
-            grand_total = subtotal + shipping_fee - discount_amt
+            
+            grand_total = subtotal  # Remove shipping fee from calculation
             
             # Update order data with totals
             order_data.update({
                 'subtotal': subtotal,
                 'shipping_fee': shipping_fee,
-                'discount_amt': discount_amt,
                 'grand_total': grand_total,
                 'total_amount': grand_total
             })
@@ -307,7 +305,6 @@ class OrderService:
             'amounts': {
                 'subtotal': float(order.subtotal) if order.subtotal else None,
                 'shipping_fee': float(order.shipping_fee),
-                'discount': float(order.discount_amt),
                 'grand_total': float(order.grand_total)
             },
             'items': [

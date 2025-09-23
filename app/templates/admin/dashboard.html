@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% from 'admin/_order_helpers.html' import render_order_status %}
 
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Tổng quan hệ thống{% endblock %}
@@ -63,6 +64,79 @@
     </div>
 </div>
 
+<!-- Sale Statistics -->
+{% if stats.sale_stats %}
+<div class="row">
+    <div class="col-12">
+        <h4 class="text-muted mb-3">Thống kê khuyến mãi</h4>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h3>{{ stats.sale_stats.active_sales }}</h3>
+                        <p class="mb-0">Đang khuyến mãi</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-tags fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h3>{{ stats.sale_stats.total_with_sale_price }}</h3>
+                        <p class="mb-0">Có giá KM</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-percent fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h3>{{ stats.sale_stats.scheduled_sales }}</h3>
+                        <p class="mb-0">Chờ kích hoạt</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h3>{{ stats.sale_stats.expired_sales }}</h3>
+                        <p class="mb-0">Đã hết hạn</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     <!-- Recent Orders -->
     <div class="col-md-8">
@@ -95,17 +169,7 @@
                                 </td>
                                 <td>{{ order.customer_name }}</td>
                                 <td>
-                                    {% if order.status == 'pending' %}
-                                        <span class="badge bg-warning">Chờ xử lý</span>
-                                    {% elif order.status == 'confirmed' %}
-                                        <span class="badge bg-info">Đã xác nhận</span>
-                                    {% elif order.status == 'shipping' %}
-                                        <span class="badge bg-primary">Đang giao</span>
-                                    {% elif order.status == 'delivered' %}
-                                        <span class="badge bg-success">Đã giao</span>
-                                    {% elif order.status == 'cancelled' %}
-                                        <span class="badge bg-danger">Đã hủy</span>
-                                    {% endif %}
+                                    {{ render_order_status(order) }}
                                 </td>
                                 <td>{{ "{:,.0f}".format(order.grand_total or 0) }}đ</td>
                                 <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else '' }}</td>
@@ -137,16 +201,8 @@
                         <i class="fas fa-plus"></i> Thêm sản phẩm mới
                     </a>
                     
-                    <a href="{{ url_for('admin.create_discount') }}" class="btn btn-custom">
-                        <i class="fas fa-percent"></i> Tạo mã giảm giá
-                    </a>
-                    
-                    <a href="{{ url_for('admin.create_shipping_rate') }}" class="btn btn-custom">
-                        <i class="fas fa-truck"></i> Thêm phí ship
-                    </a>
-                    
-                    <a href="{{ url_for('admin.orders') }}?status=pending" class="btn btn-outline-warning">
-                        <i class="fas fa-clock"></i> Đơn chờ xử lý ({{ stats.recent_orders }})
+                    <a href="{{ url_for('admin.orders') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-list-alt"></i> Quản lí đơn hàng ({{ stats.recent_orders }})
                     </a>
                 </div>
             </div>

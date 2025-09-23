@@ -17,6 +17,8 @@
         {% else %}
             <span class="badge bg-primary">Đã hoàn thành</span>
         {% endif %}
+    {% elif order.status == 'completed' %}
+        <span class="badge bg-success">Hoàn thành</span>
     {% else %}
         <span class="badge bg-secondary">{{ order.status }}</span>
     {% endif %}

@@ -4,12 +4,12 @@ Admin views for management functionality
 from flask import render_template, request, jsonify, redirect, url_for, flash, session
 from app.blueprints.admin import admin_bp
 from app.auth import admin_required_web as admin_required, get_current_user
-from app.models import Product, Category, Order, User, Discount, ShippingRate
+from app.models import Product, Category, Order, User
+from app.models.product import ProductStock
 from app.repositories.product_repo import ProductRepository
 from app.repositories.category_repo import CategoryRepository 
 from app.repositories.order_repo import OrderRepository
-from app.services.discount_service import DiscountService
-from app.services.shipping_service import ShippingService
+from app.services.product_sale_service import ProductSaleService
 from app.db import get_session, close_session
 from app.extensions import db, csrf
 from datetime import datetime, timedelta
@@ -60,10 +60,10 @@ def dashboard():
             Order.created_at >= thirty_days_ago
         ).count()
         
-        # Total revenue (last 30 days)
+        # Total revenue (last 30 days) - only completed orders
         revenue_result = session_db.query(func.sum(Order.grand_total)).filter(
             Order.created_at >= thirty_days_ago,
-            Order.status != 'cancelled'
+            Order.status == 'completed'
         ).scalar()
         total_revenue = float(revenue_result or 0)
         
@@ -72,13 +72,21 @@ def dashboard():
             Order.created_at.desc()
         ).limit(10).all()
         
+        # Get sale statistics
+        sale_service = ProductSaleService(session_db)
+        sale_stats = sale_service.get_sale_statistics()
+        
+        # Auto update sale status
+        sale_service.auto_update_sale_status()
+        
         stats = {
             'total_products': total_products,
             'total_orders': total_orders,
             'total_users': total_users,
             'recent_orders': recent_orders,
             'total_revenue': total_revenue,
-            'recent_orders_list': recent_orders_list  # Pass the objects directly
+            'recent_orders_list': recent_orders_list,  # Pass the objects directly
+            'sale_stats': sale_stats
         }
         
         return render_template('admin/dashboard.html', stats=stats)
@@ -115,6 +123,7 @@ def products():
 
 
 @admin_bp.route('/products/create', methods=['GET', 'POST'])
+@csrf.exempt
 @admin_required
 def create_product():
     """Create new product"""
@@ -130,18 +139,64 @@ def create_product():
     
     # Handle POST request
     data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Dữ liệu không hợp lệ'}), 400
+    
     session_db = get_session()
     try:
-        # Create product logic here
-        # This would involve ProductRepository.create_product()
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'message': 'Tên sản phẩm là bắt buộc'}), 400
+        
+        if not data.get('price'):
+            return jsonify({'success': False, 'message': 'Giá sản phẩm là bắt buộc'}), 400
+        
+        # Create new product
+        product = Product(
+            name=data['name'],
+            short_desc=data.get('short_desc'),
+            price=float(data['price']),
+            sale_price=float(data['sale_price']) if data.get('sale_price') else None,
+            image_url=data.get('image_url'),
+            is_active=data.get('is_active', True)
+        )
+        
+        # Generate slug from name
+        from app.utils.slugs import slugify
+        product.slug = slugify(product.name)
+        
+        session_db.add(product)
+        session_db.flush()  # Get the ID
+        
+        # Add categories if provided
+        if data.get('categories'):
+            category_ids = [int(cat_id) for cat_id in data['categories']]
+            categories = session_db.query(Category).filter(Category.id.in_(category_ids)).all()
+            product.categories = categories
+        
+        # Create initial stock record
+        qty_on_hand = int(data.get('qty_on_hand', 0))
+        stock = ProductStock(
+            product_id=product.id,
+            qty_on_hand=qty_on_hand
+        )
+        session_db.add(stock)
+        
+        session_db.commit()
         return jsonify({'success': True, 'message': 'Sản phẩm đã được tạo thành công'})
+        
+    except ValueError as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': 'Dữ liệu giá không hợp lệ'}), 400
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
+        session_db.rollback()
+        return jsonify({'success': False, 'message': f'Lỗi tạo sản phẩm: {str(e)}'}), 500
     finally:
         close_session(session_db)
 
 
 @admin_bp.route('/products/<int:product_id>/edit', methods=['GET', 'POST'])
+@csrf.exempt
 @admin_required
 def edit_product(product_id):
     """Edit existing product"""
@@ -154,20 +209,74 @@ def edit_product(product_id):
         
         if request.method == 'GET':
             categories = session_db.query(Category).filter(Category.is_active == True).all()
+            product_dict = product.to_dict(include_relations=True)
+            
+            # Ensure stock data is included
+            if not product_dict.get('stock') and product.stock:
+                product_dict['stock'] = product.stock.to_dict()
+            elif not product_dict.get('stock'):
+                product_dict['stock'] = {'qty_on_hand': 0, 'in_stock': False}
+                
             return render_template('admin/product_form.html',
                                  categories=[cat.to_dict() for cat in categories],
-                                 product=product.to_dict())
+                                 product=product_dict)
         
         # Handle POST request - update product
         data = request.get_json()
-        # Update product logic here
-        return jsonify({'success': True, 'message': 'Sản phẩm đã được cập nhật'})
+        if not data:
+            return jsonify({'success': False, 'message': 'Dữ liệu không hợp lệ'}), 400
+        
+        try:
+            # Update basic fields
+            if 'name' in data:
+                product.name = data['name']
+            if 'short_desc' in data:
+                product.short_desc = data['short_desc']
+            if 'price' in data:
+                product.price = float(data['price'])
+            if 'sale_price' in data and data['sale_price']:
+                product.sale_price = float(data['sale_price'])
+            else:
+                product.sale_price = None
+            if 'image_url' in data:
+                product.image_url = data['image_url']
+            if 'is_active' in data:
+                product.is_active = bool(data['is_active'])
+            
+            # Update categories
+            if 'categories' in data:
+                category_ids = [int(cat_id) for cat_id in data['categories']] if data['categories'] else []
+                categories = session_db.query(Category).filter(Category.id.in_(category_ids)).all()
+                product.categories = categories
+            
+            # Update stock
+            if 'qty_on_hand' in data:
+                if product.stock:
+                    product.stock.qty_on_hand = int(data['qty_on_hand'])
+                else:
+                    # Create stock record if doesn't exist
+                    stock = ProductStock(
+                        product_id=product.id,
+                        qty_on_hand=int(data['qty_on_hand'])
+                    )
+                    session_db.add(stock)
+            
+            session_db.commit()
+            return jsonify({'success': True, 'message': 'Sản phẩm đã được cập nhật thành công'})
+            
+        except ValueError as e:
+            session_db.rollback()
+            return jsonify({'success': False, 'message': 'Dữ liệu giá không hợp lệ'}), 400
+        except Exception as e:
+            session_db.rollback()
+            return jsonify({'success': False, 'message': f'Lỗi cập nhật sản phẩm: {str(e)}'}), 500
         
     finally:
         close_session(session_db)
 
 
 @admin_bp.route('/products/<int:product_id>/delete', methods=['POST'])
+@csrf.exempt
 @admin_required
 def delete_product(product_id):
     """Delete product"""
@@ -182,192 +291,6 @@ def delete_product(product_id):
         session_db.commit()
         
         return jsonify({'success': True, 'message': 'Sản phẩm đã được xóa'})
-        
-    except Exception as e:
-        session_db.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 400
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/discounts')
-@admin_required
-def discounts():
-    """Discount management page"""
-    page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '', type=str)
-    per_page = 20
-    
-    session_db = get_session()
-    try:
-        query = session_db.query(Discount)
-        
-        if search:
-            query = query.filter(
-                (Discount.code.ilike(f'%{search}%')) |
-                (Discount.name.ilike(f'%{search}%'))
-            )
-        
-        total = query.count()
-        discounts = query.order_by(Discount.created_at.desc()).offset(
-            (page - 1) * per_page
-        ).limit(per_page).all()
-        
-        return render_template('admin/discounts.html',
-                             discounts=[d.to_dict() for d in discounts],
-                             total=total,
-                             page=page,
-                             per_page=per_page,
-                             search=search)
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/discounts/create', methods=['GET', 'POST'])
-@admin_required
-def create_discount():
-    """Create new discount"""
-    if request.method == 'GET':
-        return render_template('admin/discount_form.html', discount=None)
-    
-    # Handle POST request
-    data = request.get_json()
-    session_db = get_session()
-    try:
-        # Validate discount code uniqueness
-        existing = session_db.query(Discount).filter(Discount.code == data['code']).first()
-        if existing:
-            return jsonify({'success': False, 'message': 'Mã giảm giá đã tồn tại'}), 400
-        
-        discount = Discount(
-            code=data['code'],
-            name=data['name'],
-            description=data.get('description', ''),
-            discount_type=data['discount_type'],
-            discount_value=data['discount_value'],
-            min_order_amount=data.get('min_order_amount', 0),
-            max_discount_amount=data.get('max_discount_amount'),
-            usage_limit=data.get('usage_limit'),
-            usage_limit_per_user=data.get('usage_limit_per_user', 1),
-            start_date=datetime.fromisoformat(data['start_date'].replace('Z', '+00:00')),
-            end_date=datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')),
-            is_active=data.get('is_active', True)
-        )
-        
-        session_db.add(discount)
-        session_db.commit()
-        
-        return jsonify({'success': True, 'message': 'Mã giảm giá đã được tạo thành công'})
-        
-    except Exception as e:
-        session_db.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 400
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/discounts/<int:discount_id>/delete', methods=['POST'])
-@admin_required
-def delete_discount(discount_id):
-    """Delete discount"""
-    session_db = get_session()
-    try:
-        discount = session_db.query(Discount).get(discount_id)
-        if not discount:
-            return jsonify({'success': False, 'message': 'Không tìm thấy mã giảm giá'}), 404
-        
-        # Soft delete by setting is_active = False
-        discount.is_active = False
-        session_db.commit()
-        
-        return jsonify({'success': True, 'message': 'Mã giảm giá đã được xóa'})
-        
-    except Exception as e:
-        session_db.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 400
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/shipping-rates')
-@admin_required
-def shipping_rates():
-    """Shipping rate management page"""
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    
-    session_db = get_session()
-    try:
-        query = session_db.query(ShippingRate)
-        total = query.count()
-        
-        shipping_rates = query.order_by(ShippingRate.priority.desc(), ShippingRate.created_at.desc()).offset(
-            (page - 1) * per_page
-        ).limit(per_page).all()
-        
-        return render_template('admin/shipping_rates.html',
-                             shipping_rates=[sr.to_dict() for sr in shipping_rates],
-                             total=total,
-                             page=page,
-                             per_page=per_page)
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/shipping-rates/create', methods=['GET', 'POST'])
-@admin_required
-def create_shipping_rate():
-    """Create new shipping rate"""
-    if request.method == 'GET':
-        return render_template('admin/shipping_rate_form.html', shipping_rate=None)
-    
-    # Handle POST request
-    data = request.get_json()
-    session_db = get_session()
-    try:
-        shipping_rate = ShippingRate(
-            name=data['name'],
-            description=data.get('description', ''),
-            province=data.get('province'),
-            district=data.get('district'),
-            ward=data.get('ward'),
-            shipping_method=data.get('shipping_method', 'standard'),
-            base_fee=data['base_fee'],
-            per_kg_fee=data.get('per_kg_fee', 0),
-            free_shipping_threshold=data.get('free_shipping_threshold'),
-            estimated_days_min=data.get('estimated_days_min', 1),
-            estimated_days_max=data.get('estimated_days_max', 3),
-            is_active=data.get('is_active', True),
-            priority=data.get('priority', 0)
-        )
-        
-        session_db.add(shipping_rate)
-        session_db.commit()
-        
-        return jsonify({'success': True, 'message': 'Phí ship đã được tạo thành công'})
-        
-    except Exception as e:
-        session_db.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 400
-    finally:
-        close_session(session_db)
-
-
-@admin_bp.route('/shipping-rates/<int:rate_id>/delete', methods=['POST'])
-@admin_required
-def delete_shipping_rate(rate_id):
-    """Delete shipping rate"""
-    session_db = get_session()
-    try:
-        shipping_rate = session_db.query(ShippingRate).get(rate_id)
-        if not shipping_rate:
-            return jsonify({'success': False, 'message': 'Không tìm thấy phí ship'}), 404
-        
-        # Soft delete by setting is_active = False
-        shipping_rate.is_active = False
-        session_db.commit()
-        
-        return jsonify({'success': True, 'message': 'Phí ship đã được xóa'})
         
     except Exception as e:
         session_db.rollback()
@@ -407,10 +330,12 @@ def order_detail(order_id):
     try:
         order = session_db.query(Order).get(order_id)
         if not order:
-            flash('Không tìm thấy đơn hàng', 'error')
+            flash('Không tìm thấy đ�n hàng', 'error')
             return redirect(url_for('admin.orders'))
         
-        return render_template('admin/order_detail.html', order=order.to_dict(include_relations=True))
+        # Pass the order object directly instead of converting to dict
+        # This preserves datetime objects for template strftime usage
+        return render_template('admin/order_detail.html', order=order)
         
     finally:
         close_session(session_db)
@@ -581,3 +506,215 @@ def mark_received(order_code):
     finally:
         close_session(session_db)
 """
+
+
+@admin_bp.route('/product-sales')
+@admin_required
+def product_sales():
+    """Product sale management page"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    category_id = request.args.get('category_id', '', type=str)
+    sale_status = request.args.get('sale_status', '', type=str)
+    per_page = 20
+    
+    session_db = get_session()
+    try:
+        query = session_db.query(Product).filter(Product.is_active == True)
+        
+        # Search filter
+        if search:
+            query = query.filter(Product.name.ilike(f'%{search}%'))
+        
+        # Category filter
+        if category_id:
+            query = query.join(Product.categories).filter(Category.id == category_id)
+        
+        # Sale status filter
+        if sale_status == 'on_sale':
+            query = query.filter(Product.sale_active == True)
+        elif sale_status == 'not_on_sale':
+            query = query.filter(Product.sale_active == False)
+        
+        total = query.count()
+        products = query.order_by(Product.name).offset(
+            (page - 1) * per_page
+        ).limit(per_page).all()
+        
+        # Get categories for filter
+        categories = session_db.query(Category).filter(Category.is_active == True).all()
+        
+        return render_template('admin/product_sales.html',
+                             products=[p.to_dict(include_relations=True) for p in products],
+                             categories=[cat.to_dict() for cat in categories],
+                             total=total,
+                             page=page,
+                             per_page=per_page,
+                             search=search,
+                             category_id=category_id,
+                             sale_status=sale_status)
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/product-sales/<int:product_id>/set-sale', methods=['POST'])
+@csrf.exempt
+@admin_required
+def set_product_sale(product_id):
+    """Set sale price for a product"""
+    data = request.get_json()
+    session_db = get_session()
+    try:
+        sale_service = ProductSaleService(session_db)
+        
+        sale_price = data.get('sale_price')
+        sale_start = data.get('sale_start')
+        sale_end = data.get('sale_end')
+        
+        # Parse dates
+        start_date = None
+        end_date = None
+        
+        if sale_start:
+            try:
+                start_date = datetime.fromisoformat(sale_start.replace('Z', '+00:00'))
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Định dạng ngày bắt đầu không hợp lệ'}), 400
+        
+        if sale_end:
+            try:
+                end_date = datetime.fromisoformat(sale_end.replace('Z', '+00:00'))
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Định dạng ngày kết thúc không hợp lệ'}), 400
+        
+        # Update product using service
+        product = sale_service.set_product_sale(product_id, sale_price, start_date, end_date)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Đã thiết lập giá khuyến mãi thành công',
+            'product': product.to_dict()
+        })
+        
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/product-sales/<int:product_id>/remove-sale', methods=['POST'])
+@csrf.exempt
+@admin_required
+def remove_product_sale(product_id):
+    """Remove sale price from a product"""
+    session_db = get_session()
+    try:
+        sale_service = ProductSaleService(session_db)
+        product = sale_service.remove_product_sale(product_id)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Đã xóa giá khuyến mãi thành công',
+            'product': product.to_dict()
+        })
+        
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/product-sales/bulk-actions', methods=['POST'])
+@csrf.exempt
+@admin_required
+def bulk_sale_actions():
+    """Bulk actions for product sales"""
+    data = request.get_json()
+    product_ids = data.get('product_ids', [])
+    action = data.get('action')
+    
+    if not product_ids:
+        return jsonify({'success': False, 'message': 'Không có sản phẩm nào được chọn'}), 400
+    
+    session_db = get_session()
+    try:
+        sale_service = ProductSaleService(session_db)
+        
+        if action == 'remove_sale':
+            count = sale_service.bulk_remove_sales(product_ids)
+            return jsonify({
+                'success': True, 
+                'message': f'Đã xóa giá khuyến mãi cho {count} sản phẩm'
+            })
+        
+        elif action == 'activate_sale':
+            count = sale_service.bulk_activate_sales(product_ids)
+            return jsonify({
+                'success': True, 
+                'message': f'Đã kích hoạt khuyến mãi cho {count} sản phẩm'
+            })
+        
+        elif action == 'deactivate_sale':
+            count = sale_service.bulk_deactivate_sales(product_ids)
+            return jsonify({
+                'success': True, 
+                'message': f'Đã tạm dừng khuyến mãi cho {count} sản phẩm'
+            })
+        
+        else:
+            return jsonify({'success': False, 'message': 'Hành động không hợp lệ'}), 400
+            
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/product-sales/auto-update', methods=['POST'])
+@csrf.exempt
+@admin_required
+def auto_update_sales():
+    """Auto update product sale status based on dates"""
+    session_db = get_session()
+    try:
+        sale_service = ProductSaleService(session_db)
+        updated_count = sale_service.auto_update_sale_status()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Đã cập nhật trạng thái cho {updated_count} sản phẩm',
+            'updated_count': updated_count
+        })
+        
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/product-sales/statistics')
+@admin_required
+def sale_statistics():
+    """Get sale statistics"""
+    session_db = get_session()
+    try:
+        sale_service = ProductSaleService(session_db)
+        stats = sale_service.get_sale_statistics()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Có lỗi xảy ra: ' + str(e)}), 400
+    finally:
+        close_session(session_db)

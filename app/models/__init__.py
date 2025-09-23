@@ -19,13 +19,11 @@ from .product import Product, ProductCategory, ProductImage, ProductStock, Produ
 from .review import ProductReview
 from .order import Order, OrderItem, OrderEvent, PaymentMethod, PaymentStatus, OrderStatus, EventType
 from .user import User
-from .discount import Discount
 from .shipping_rate import ShippingRate
-from .user_discount_usage import UserDiscountUsage
 
 __all__ = [
     'BaseModel', 'Category', 'Product', 'ProductCategory', 'ProductImage', 
     'ProductStock', 'ProductEffectivePrice', 'ProductRating', 'ProductReview',
     'Order', 'OrderItem', 'OrderEvent', 'PaymentMethod', 'PaymentStatus', 
-    'OrderStatus', 'EventType', 'User', 'Discount', 'ShippingRate', 'UserDiscountUsage'
+    'OrderStatus', 'EventType', 'User', 'ShippingRate'
 ]

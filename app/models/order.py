@@ -60,8 +60,6 @@ class Order(db.Model):
     # Financial fields
     subtotal = db.Column(db.Numeric(12, 2), nullable=True)
     shipping_fee = db.Column(db.Numeric(12, 2), default=0, nullable=False)
-    discount_amt = db.Column(db.Numeric(12, 2), default=0, nullable=False)
-    discount_code = db.Column(db.String(50), nullable=True)  # Applied discount code
     grand_total = db.Column(db.Numeric(12, 2), nullable=False)
     total_amount = db.Column(db.Numeric(12, 2), nullable=False)
     
@@ -90,7 +88,6 @@ class Order(db.Model):
             'amounts': {
                 'subtotal': float(self.subtotal) if self.subtotal else None,
                 'shipping_fee': float(self.shipping_fee),
-                'discount': float(self.discount_amt),
                 'grand_total': float(self.grand_total)
             },
             'created_at': self.created_at.isoformat() if self.created_at else None

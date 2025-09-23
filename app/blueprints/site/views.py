@@ -4,7 +4,6 @@ from app.services.stock_service import StockService
 from app.services.pricing_service import PricingService
 from app.services.order_service import OrderService
 from app.services.review_service import ReviewService
-from app.services.shipping_service import ShippingService
 from app.repositories.category_repo import CategoryRepository
 from app.repositories.product_repo import ProductRepository
 from app.repositories.order_repo import OrderRepository
@@ -60,20 +59,9 @@ def get_cart_count():
     return sum(cart.values())
 
 def calculate_shipping_fee(subtotal, province=None, district=None, ward=None):
-    """Calculate shipping fee based on subtotal and location"""
-    # Use ShippingService with database session
-    db_session = get_db_session()
-    try:
-        shipping_service_instance = ShippingService(db_session)
-        result = shipping_service_instance.calculate_shipping_fee(
-            province=province,
-            district=district, 
-            ward=ward,
-            order_amount=subtotal
-        )
-        return result['shipping_fee']
-    finally:
-        db_session.close()
+    """Calculate shipping fee based on subtotal and location - DISABLED"""
+    # Shipping fee removed - always return 0
+    return 0
 
 @site_bp.context_processor
 def inject_globals():
@@ -464,13 +452,8 @@ def checkout():
         try:
             order_service = OrderService()
             
-            # Calculate shipping
-            shipping_fee = calculate_shipping_fee(
-                subtotal, 
-                form.province.data, 
-                form.district.data, 
-                form.ward.data
-            )
+            # No shipping calculation needed
+            shipping_fee = 0
             
             # Create order payload with correct structure
             order_payload = {
@@ -512,8 +495,8 @@ def checkout():
             else:
                 flash(f'Có lỗi xảy ra khi đặt hàng: {str(e)}', 'error')
     
-    # Calculate estimated shipping
-    shipping_fee = calculate_shipping_fee(subtotal)
+    # No shipping fee calculation needed
+    shipping_fee = 0
     
     return render_template('site/checkout.html',
                          form=form,
@@ -526,42 +509,23 @@ def checkout():
 @site_bp.route('/api/calculate-shipping', methods=['POST'])
 @csrf.exempt
 def api_calculate_shipping():
-    """API endpoint to calculate shipping fee"""
+    """API endpoint to calculate shipping fee - DISABLED"""
     try:
         data = request.get_json()
-        subtotal = data.get('subtotal', 0)
-        province = data.get('province')
-        district = data.get('district')
-        ward = data.get('ward')
         
-        shipping_fee = calculate_shipping_fee(subtotal, province, district, ward)
-        
-        # Get available shipping methods
-        db_session = get_db_session()
-        try:
-            shipping_service_instance = ShippingService(db_session)
-            result = shipping_service_instance.calculate_shipping_fee(
-                province=province,
-                district=district,
-                ward=ward,
-                order_amount=subtotal
-            )
-            
-            return jsonify({
-                'success': True,
-                'shipping_fee': result['shipping_fee'],
-                'is_free': result['is_free'],
-                'available_methods': result['available_methods'],
-                'selected_rate': result['shipping_rate']
-            })
-        finally:
-            db_session.close()
+        return jsonify({
+            'success': True,
+            'shipping_fee': 0,
+            'is_free': True,
+            'available_methods': [],
+            'selected_rate': None
+        })
             
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e),
-            'shipping_fee': 50000  # Default fallback
+            'shipping_fee': 0  # No shipping fee
         }), 400
 
 @site_bp.route('/orders/<order_code>')
@@ -899,12 +863,19 @@ def confirm_received(order_code):
             return jsonify({'success': False, 'error': 'Đơn hàng chưa hoàn thành, không thể xác nhận đã nhận'}), 400
         
         # Check if already confirmed
-        if order.payment_method == 'COD' and order.payment_status == 'mock_paid':
+        if order.status == 'completed':
             return jsonify({'success': False, 'error': 'Đơn hàng đã được xác nhận nhận hàng trước đó'}), 400
+        
+        # Update order status to completed
+        order.status = 'completed'
         
         # For COD orders, mark payment as completed when customer receives
         if order.payment_method == 'COD':
             order.payment_status = 'mock_paid'
+        
+        # For transfer orders, ensure transfer is confirmed
+        if order.payment_method == 'MOCK_TRANSFER':
+            order.transfer_confirmed = True
         
         session_db.commit()
         
