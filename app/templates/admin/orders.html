@@ -43,7 +43,6 @@
                         <th>Mã đơn hàng</th>
                         <th>Khách hàng</th>
                         <th>Số điện thoại</th>
-                        <th>Địa chỉ</th>
                         <th>Tổng tiền</th>
                         <th>Phương thức thanh toán</th>
                         <th>Trạng thái thanh toán</th>
@@ -63,14 +62,6 @@
                         </td>
                         <td>{{ order.customer_name }}</td>
                         <td>{{ order.phone }}</td>
-                        <td>
-                            <small>
-                                {{ order.address[:30] }}{% if order.address|length > 30 %}...{% endif %}<br>
-                                {% if order.ward %}{{ order.ward }}, {% endif %}
-                                {% if order.district %}{{ order.district }}, {% endif %}
-                                {% if order.province %}{{ order.province }}{% endif %}
-                            </small>
-                        </td>
                         <td>
                             <strong class="text-success">
                                 {{ "{:,.0f}".format(order.grand_total) }} VNĐ
@@ -96,7 +87,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="10" class="text-center py-4">
+                        <td colspan="9" class="text-center py-4">
                             <div class="text-muted">
                                 <i class="fas fa-shopping-cart fa-3x mb-3"></i>
                                 <p>Không có đơn hàng nào</p>

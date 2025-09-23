@@ -9,20 +9,49 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Custom Admin CSS -->
+    
+    <!-- Admin Custom Styles -->
     <style>
-        .admin-sidebar {
+        .admin-wrapper {
+            display: flex;
             min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            width: 250px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .admin-sidebar.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+        
+        .admin-sidebar .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .admin-sidebar .sidebar-header h4 {
+            color: white;
+            margin: 0;
+            font-size: 1.2rem;
         }
         
         .admin-sidebar .nav-link {
             color: #fff;
             padding: 15px 20px;
             border-radius: 0;
-            margin: 2px 0;
+            display: flex;
+            align-items: center;
             transition: all 0.3s ease;
+            border: none;
+            text-decoration: none;
         }
         
         .admin-sidebar .nav-link:hover {
@@ -40,18 +69,38 @@
         .admin-sidebar .nav-link i {
             width: 20px;
             margin-right: 10px;
+            text-align: center;
         }
         
         .admin-content {
+            flex: 1;
             background: #f8f9fa;
-            min-height: 100vh;
+            transition: all 0.3s ease;
         }
         
         .admin-header {
             background: #fff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 15px 30px;
-            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-right: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-toggle:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            transform: scale(1.05);
         }
         
         .stat-card {
@@ -101,86 +150,141 @@
             border: none;
             padding: 15px 20px;
         }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .admin-wrapper {
+                flex-direction: column;
+            }
+            
+            .admin-sidebar {
+                width: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1050;
+                transform: translateX(-100%);
+            }
+            
+            .admin-sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .admin-sidebar.collapsed {
+                width: 100%;
+                transform: translateX(-100%);
+            }
+            
+            .admin-content {
+                width: 100%;
+            }
+            
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1040;
+                display: none;
+            }
+            
+            .mobile-overlay.show {
+                display: block;
+            }
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Admin Sidebar -->
-            <div class="col-md-2 admin-sidebar p-0">
-                <div class="p-4 text-center">
-                    <h4 class="text-white mb-0">
-                        <i class="fas fa-fruit-apple"></i> Fuji Admin
-                    </h4>
-                </div>
-                
-                <nav class="nav flex-column">
-                    <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" 
-                       href="{{ url_for('admin.dashboard') }}">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                    
-                    <a class="nav-link {% if 'product' in request.endpoint and 'sale' not in request.endpoint %}active{% endif %}" 
-                       href="{{ url_for('admin.products') }}">
-                        <i class="fas fa-box"></i> Quản lý sản phẩm
-                    </a>
-                    
-                    <a class="nav-link {% if 'product-sales' in request.endpoint %}active{% endif %}" 
-                       href="{{ url_for('admin.product_sales') }}">
-                        <i class="fas fa-tags"></i> Khuyến mãi sản phẩm
-                    </a>
-                    
-                    <a class="nav-link {% if 'order' in request.endpoint %}active{% endif %}" 
-                       href="{{ url_for('admin.orders') }}">
-                        <i class="fas fa-shopping-cart"></i> Quản lý đơn hàng
-                    </a>
-                    
-                    <hr class="text-white">
-                    
-                    <a class="nav-link" href="{{ url_for('site.home') }}">
-                        <i class="fas fa-home"></i> Về trang chủ
-                    </a>
-                    
-                    <a class="nav-link" href="{{ url_for('site.logout') }}">
-                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                    </a>
-                </nav>
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    
+    <div class="admin-wrapper">
+        <!-- Admin Sidebar -->
+        <div class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <h4><i class="fas fa-apple-alt"></i> Fuji Admin</h4>
             </div>
             
-            <!-- Admin Content -->
-            <div class="col-md-10 admin-content p-0">
-                <!-- Admin Header -->
-                <div class="admin-header d-flex justify-content-between align-items-center">
+            <nav class="nav flex-column">
+                <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" 
+                   href="{{ url_for('admin.dashboard') }}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a class="nav-link {% if 'product' in request.endpoint and 'sale' not in request.endpoint %}active{% endif %}" 
+                   href="{{ url_for('admin.products') }}">
+                    <i class="fas fa-box"></i>
+                    <span>Quản lý sản phẩm</span>
+                </a>
+                
+                <a class="nav-link {% if 'product-sales' in request.endpoint %}active{% endif %}" 
+                   href="{{ url_for('admin.product_sales') }}">
+                    <i class="fas fa-tags"></i>
+                    <span>Khuyến mãi sản phẩm</span>
+                </a>
+                
+                <a class="nav-link {% if 'order' in request.endpoint %}active{% endif %}" 
+                   href="{{ url_for('admin.orders') }}">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Quản lý đơn hàng</span>
+                </a>
+                
+                <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 20px;">
+                
+                <a class="nav-link" href="{{ url_for('site.home') }}">
+                    <i class="fas fa-home"></i>
+                    <span>Về trang chủ</span>
+                </a>
+                
+                <a class="nav-link" href="{{ url_for('site.logout') }}">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Đăng xuất</span>
+                </a>
+            </nav>
+        </div>
+        
+        <!-- Admin Content -->
+        <div class="admin-content">
+            <!-- Admin Header -->
+            <div class="admin-header">
+                <div class="d-flex align-items-center">
+                    <button class="sidebar-toggle" id="sidebarToggle" title="Ẩn/Hiện menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <div>
                         <h2 class="mb-0">{% block page_title %}Admin Dashboard{% endblock %}</h2>
                         <small class="text-muted">{% block page_subtitle %}Quản lý hệ thống{% endblock %}</small>
                     </div>
-                    <div>
-                        <span class="text-muted">Xin chào, <strong>{{ current_user.display_name if current_user else 'Admin' }}</strong></span>
+                </div>
+                <div>
+                    <span class="text-muted">Xin chào, <strong>{{ current_user.display_name if current_user else 'Admin' }}</strong></span>
+                </div>
+            </div>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="container-fluid">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-custom alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                </div>
-                
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="container-fluid">
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-custom alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                
-                <!-- Main Content -->
-                <div class="container-fluid">
-                    {% block content %}
-                    {% endblock %}
-                </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Main Content -->
+            <div class="container-fluid">
+                {% block content %}
+                {% endblock %}
             </div>
         </div>
     </div>
@@ -189,6 +293,108 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Admin Toggle Script -->
+    <script>
+        $(document).ready(function() {
+            let isMobile = window.innerWidth < 768;
+            
+            // Toggle sidebar function
+            function toggleSidebar() {
+                const sidebar = $('#adminSidebar');
+                const overlay = $('#mobileOverlay');
+                const toggleBtn = $('#sidebarToggle');
+                const icon = toggleBtn.find('i');
+                
+                if (isMobile) {
+                    // Mobile behavior
+                    if (sidebar.hasClass('show')) {
+                        sidebar.removeClass('show');
+                        overlay.removeClass('show');
+                        icon.removeClass('fa-times').addClass('fa-bars');
+                        $('body').removeClass('overflow-hidden');
+                    } else {
+                        sidebar.addClass('show');
+                        overlay.addClass('show');
+                        icon.removeClass('fa-bars').addClass('fa-times');
+                        $('body').addClass('overflow-hidden');
+                    }
+                } else {
+                    // Desktop behavior
+                    if (sidebar.hasClass('collapsed')) {
+                        sidebar.removeClass('collapsed');
+                        icon.removeClass('fa-arrow-right').addClass('fa-bars');
+                        localStorage.setItem('sidebarCollapsed', 'false');
+                    } else {
+                        sidebar.addClass('collapsed');
+                        icon.removeClass('fa-bars').addClass('fa-arrow-right');
+                        localStorage.setItem('sidebarCollapsed', 'true');
+                    }
+                }
+            }
+            
+            // Toggle button click
+            $('#sidebarToggle').click(function() {
+                toggleSidebar();
+            });
+            
+            // Close sidebar when clicking overlay (mobile)
+            $('#mobileOverlay').click(function() {
+                if (isMobile) {
+                    toggleSidebar();
+                }
+            });
+            
+            // Handle window resize
+            $(window).resize(function() {
+                const newIsMobile = window.innerWidth < 768;
+                if (newIsMobile !== isMobile) {
+                    isMobile = newIsMobile;
+                    const sidebar = $('#adminSidebar');
+                    const overlay = $('#mobileOverlay');
+                    const toggleBtn = $('#sidebarToggle');
+                    const icon = toggleBtn.find('i');
+                    
+                    // Reset states
+                    sidebar.removeClass('show collapsed');
+                    overlay.removeClass('show');
+                    $('body').removeClass('overflow-hidden');
+                    
+                    if (isMobile) {
+                        icon.removeClass('fa-arrow-right').addClass('fa-bars');
+                    } else {
+                        // Restore desktop state
+                        const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                        if (collapsed) {
+                            sidebar.addClass('collapsed');
+                            icon.removeClass('fa-bars').addClass('fa-arrow-right');
+                        } else {
+                            icon.removeClass('fa-arrow-right').addClass('fa-bars');
+                        }
+                    }
+                }
+            });
+            
+            // Initialize desktop state
+            if (!isMobile) {
+                const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (collapsed) {
+                    $('#adminSidebar').addClass('collapsed');
+                    $('#sidebarToggle i').removeClass('fa-bars').addClass('fa-arrow-right');
+                }
+            }
+            
+            // Auto-hide flash messages
+            setTimeout(function() {
+                $('.alert.alert-dismissible').fadeOut('slow');
+            }, 5000);
+            
+            // Add overflow hidden utility class
+            if (!$('body').hasClass('overflow-hidden')) {
+                $('<style>.overflow-hidden { overflow: hidden !important; }</style>').appendTo('head');
+            }
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
