@@ -2,6 +2,9 @@
 
 {% block title %}Đơn hàng #{{ order.order_code }} - Fuji Fruit{% endblock %}
 
+{# Import order helpers for consistent status display #}
+{% from 'site/_order_helpers.html' import render_user_order_status, render_user_payment_status, render_user_payment_method %}
+
 {% block content %}
 <div class="container mt-4">
     <!-- Breadcrumb -->
@@ -21,13 +24,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">Đơn hàng #{{ order.order_code }}</h4>
                         <div>
-                            <span class="badge bg-{{ 'success' if order.status == 'fulfilled' else 'warning' if order.status == 'confirmed' else 'primary' if order.status == 'pending' else 'danger' }} fs-6">
-                                {% if order.status == 'pending' %}Chờ xác nhận
-                                {% elif order.status == 'confirmed' %}Đã xác nhận
-                                {% elif order.status == 'fulfilled' %}Đã giao
-                                {% elif order.status == 'cancelled' %}Đã hủy
-                                {% endif %}
-                            </span>
+                            {{ render_user_order_status(order) }}
                         </div>
                     </div>
                 </div>
@@ -42,20 +39,8 @@
                         <div class="col-md-6">
                             <h6>Thông tin đơn hàng:</h6>
                             <p class="mb-1">Ngày đặt: {{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
-                            <p class="mb-1">Thanh toán: 
-                                {% if order.payment_method == 'COD' %}
-                                    Khi nhận hàng
-                                {% else %}
-                                    Chuyển khoản
-                                {% endif %}
-                            </p>
-                            <p class="mb-0">Trạng thái thanh toán: 
-                                <span class="badge bg-{{ 'success' if order.payment_status == 'mock_paid' else 'warning' }}">
-                                    {% if order.payment_status == 'mock_paid' %}Đã thanh toán
-                                    {% else %}Chưa thanh toán
-                                    {% endif %}
-                                </span>
-                            </p>
+                            <p class="mb-1">Thanh toán: {{ render_user_payment_method(order) }}</p>
+                            <p class="mb-0">Trạng thái thanh toán: {{ render_user_payment_status(order) }}</p>
                         </div>
                     </div>
                 </div>
@@ -117,18 +102,41 @@
                         {% for event in timeline %}
                         <div class="timeline-item d-flex mb-3">
                             <div class="timeline-marker">
-                                <i class="bi bi-{{ 'check-circle-fill text-success' if event.event_type in ['fulfilled', 'confirmed', 'mock_paid'] else 'clock text-warning' if event.event_type == 'placed' else 'x-circle text-danger' if event.event_type == 'cancelled' else 'arrow-repeat text-info' if event.event_type == 'restocked' else 'circle text-primary' }}"></i>
+                                {% if event.event_type in ['completed', 'admin_confirmed', 'payment_confirmed'] %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% elif event.event_type == 'delivered' %}
+                                    <i class="bi bi-truck text-info"></i>
+                                {% elif event.event_type == 'placed' %}
+                                    <i class="bi bi-clock text-warning"></i>
+                                {% elif event.event_type == 'cancelled' %}
+                                    <i class="bi bi-x-circle text-danger"></i>
+                                {% elif event.event_type == 'restocked' %}
+                                    <i class="bi bi-arrow-repeat text-info"></i>
+                                {% else %}
+                                    <i class="bi bi-circle text-primary"></i>
+                                {% endif %}
                             </div>
                             <div class="timeline-content ms-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-1">
-                                        {% if event.event_type == 'placed' %}Đặt hàng
-                                        {% elif event.event_type == 'confirmed' %}Đã xác nhận
-                                        {% elif event.event_type == 'fulfilled' %}Đã giao hàng
-                                        {% elif event.event_type == 'cancelled' %}Đã hủy
-                                        {% elif event.event_type == 'mock_paid' %}Đã thanh toán (chuyển khoản)
-                                        {% elif event.event_type == 'restocked' %}Đã hoàn kho
-                                        {% else %}{{ event.event_type }}
+                                        {% if event.event_type == 'placed' %}
+                                            Đặt hàng
+                                        {% elif event.event_type == 'payment_confirmed' %}
+                                            Đã xác nhận thanh toán
+                                        {% elif event.event_type == 'admin_confirmed' %}
+                                            Đã xác nhận đơn hàng
+                                        {% elif event.event_type == 'shipping_started' %}
+                                            Bắt đầu vận chuyển
+                                        {% elif event.event_type == 'delivered' %}
+                                            Đã giao hàng
+                                        {% elif event.event_type == 'completed' %}
+                                            Hoàn thành đơn hàng
+                                        {% elif event.event_type == 'cancelled' %}
+                                            Đã hủy
+                                        {% elif event.event_type == 'restocked' %}
+                                            Đã hoàn kho
+                                        {% else %}
+                                            {{ event.event_type }}
                                         {% endif %}
                                     </h6>
                                     <small class="text-muted">{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
@@ -176,7 +184,7 @@
                     </div>
                     
                     <!-- Cancel Order Button -->
-                    {% if order.status in ['pending', 'confirmed'] %}
+                    {% if order.status in ['pending_payment', 'waiting_admin_confirmation'] %}
                     <div class="d-grid mb-3">
                         <button type="button" class="btn btn-outline-danger" onclick="showCancelModal()">
                             <i class="bi bi-x-circle"></i> Hủy đơn hàng
@@ -184,20 +192,39 @@
                     </div>
                     {% endif %}
                     
-                    <!-- Mock Payment Button -->
-                    {% if order.payment_method == 'MOCK_TRANSFER' and order.payment_status == 'unpaid' and order.status != 'cancelled' %}
+                    <!-- Bank Transfer Confirmation Button -->
+                    {% if order.payment_method == 'MOCK_TRANSFER' and order.status == 'pending_payment' and not order.transfer_confirmed %}
                     <div class="d-grid mb-3">
-                        <form method="POST" action="{{ url_for('site.mock_pay', order_code=order.order_code) }}">
-                            <button type="submit" class="btn btn-success w-100"
-                                    onclick="return confirm('Xác nhận rằng bạn đã chuyển khoản?')">
-                                <i class="bi bi-credit-card"></i> Tôi đã chuyển khoản
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-success" onclick="confirmBankTransfer()">
+                            <i class="bi bi-credit-card"></i> Tôi đã chuyển khoản
+                        </button>
                     </div>
                     <div class="alert alert-info">
                         <small>
                             <i class="bi bi-info-circle"></i>
-                            Sau khi chuyển khoản, hãy bấm nút trên để xác nhận thanh toán.
+                            Vui lòng chuyển khoản theo thông tin sau và xác nhận để hoàn tất đặt hàng.
+                        </small>
+                        <hr class="my-2">
+                        <div style="font-size: 0.85rem;">
+                            <p class="mb-1"><strong>STK:</strong> 0123456789</p>
+                            <p class="mb-1"><strong>Ngân hàng:</strong> Vietcombank</p>
+                            <p class="mb-1"><strong>Chủ TK:</strong> FUJI FRUIT COMPANY</p>
+                            <p class="mb-0"><strong>Nội dung:</strong> {{ order.order_code }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Order Completion Button -->
+                    {% if order.status == 'delivered' %}
+                    <div class="d-grid mb-3">
+                        <button type="button" class="btn btn-primary" onclick="confirmReceipt()">
+                            <i class="bi bi-check-circle"></i> Đã nhận đơn hàng
+                        </button>
+                    </div>
+                    <div class="alert alert-success">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            Đơn hàng đã được giao đến bạn. Vui lòng xác nhận đã nhận hàng để hoàn tất đơn hàng.
                         </small>
                     </div>
                     {% endif %}
@@ -245,11 +272,61 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 function showCancelModal() {
     const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
     modal.show();
+}
+
+function confirmBankTransfer() {
+    if (confirm('Xác nhận rằng bạn đã chuyển khoản theo thông tin trên?')) {
+        fetch(`/orders/{{ order.order_code }}/confirm-transfer`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Có lỗi xảy ra: ' + error.message);
+        });
+    }
+}
+
+function confirmReceipt() {
+    if (confirm('Xác nhận rằng bạn đã nhận được đơn hàng?')) {
+        fetch(`/orders/{{ order.order_code }}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Có lỗi xảy ra: ' + error.message);
+        });
+    }
 }
 </script>
 {% endblock %}

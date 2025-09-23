@@ -70,7 +70,7 @@ class OrderRepository(BaseRepository):
         
         # Status filter
         if status:
-            query = query.filter_by(status=OrderStatus(status))
+            query = query.filter_by(status=status)  # Use status directly as string
         
         # Text search in order_code, customer_name, phone
         if search_query:
@@ -102,7 +102,24 @@ class OrderRepository(BaseRepository):
     
     def get_orders_by_status(self, status: str, page: int = 1, per_page: int = 20, user_id: str = None) -> Tuple[List[Order], int]:
         """Get orders by status with pagination"""
-        query = self.model.query.filter_by(status=status)
+        query = self.model.query
+        
+        # Handle special status 'completed' for orders that are fully finished
+        if status == 'completed':
+            # Orders that are delivered and customer has confirmed receipt
+            query = query.filter(
+                Order.status == 'fulfilled',
+                Order.transfer_confirmed == True,
+                or_(
+                    # COD orders where customer paid on delivery
+                    (Order.payment_method == 'COD') & (Order.payment_status == 'mock_paid'),
+                    # Transfer orders that are delivered (already paid)
+                    (Order.payment_method == 'MOCK_TRANSFER')
+                )
+            )
+        else:
+            # Regular status filtering
+            query = query.filter_by(status=status)
         
         # User filter for authenticated users
         if user_id:
@@ -124,11 +141,7 @@ class OrderRepository(BaseRepository):
         
         # Status filter (if provided)
         if status and status.strip():
-            try:
-                query = query.filter_by(status=OrderStatus(status))
-            except ValueError:
-                # Invalid status, return empty results
-                return [], 0
+            query = query.filter_by(status=status)  # Use status directly as string
         
         query = query.order_by(desc(Order.created_at))
         
@@ -171,8 +184,8 @@ class OrderRepository(BaseRepository):
             if not order:
                 return False
             
-            # Only allow cancellation for pending and confirmed orders
-            if order.status not in ['pending', 'confirmed']:
+            # Only allow cancellation for orders that can still be cancelled
+            if order.status not in ['pending_payment', 'waiting_admin_confirmation', 'shipping']:
                 return False
             
             order.status = 'cancelled'

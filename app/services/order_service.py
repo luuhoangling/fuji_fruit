@@ -2,6 +2,7 @@
 
 import string
 import random
+from datetime import datetime
 from app.repositories.order_repo import order_repo
 from app.repositories.product_repo import product_repo
 from app.services.pricing_service import pricing_service
@@ -43,9 +44,25 @@ class OrderService:
             customer = payload['customer']
             payment_method = PaymentMethod(payload['payment_method'])
             items = payload['items']
+            transfer_confirmed = payload.get('transfer_confirmed', False)
             
             # Generate order code
             order_code = self.generate_order_code()
+            
+            # Determine initial status based on payment method
+            if payment_method == PaymentMethod.COD:
+                initial_status = 'waiting_admin_confirmation'
+                payment_status = 'unpaid'
+            elif payment_method == PaymentMethod.MOCK_TRANSFER:
+                if transfer_confirmed:
+                    initial_status = 'waiting_admin_confirmation'
+                    payment_status = 'transfer_confirmed'
+                else:
+                    initial_status = 'pending_payment'
+                    payment_status = 'unpaid'
+            else:
+                initial_status = 'pending_payment'
+                payment_status = 'unpaid'
             
             # Create order record
             order_data = {
@@ -58,8 +75,10 @@ class OrderService:
                 'district': customer.get('district'),
                 'ward': customer.get('ward'),
                 'payment_method': payment_method.value,  # String value
-                'payment_status': 'unpaid',  # Direct string value
-                'status': 'pending'  # Direct string value
+                'payment_status': payment_status,  # Direct string value
+                'status': initial_status,  # Direct string value
+                'transfer_confirmed': transfer_confirmed,
+                'transfer_confirmed_at': datetime.utcnow() if transfer_confirmed else None
             }
             
             # Process order items
@@ -163,22 +182,22 @@ class OrderService:
             
             print(f"Found order: {order.id}, current payment_status: {order.payment_status}")
             
-            if order.payment_status == 'mock_paid':
+            if order.payment_status == 'paid':
                 print("Order already paid, returning early")
                 return self._format_order_response(order)
             
-            print("Updating payment status to mock_paid")
+            print("Updating payment status to paid")
             # Update payment status
-            order.payment_status = 'mock_paid'
+            order.payment_status = 'paid'
             
-            print("Adding mock_paid event")
-            order_repo.add_event(order.id, 'mock_paid', "User marked as paid")
+            print("Adding paid event")
+            order_repo.add_event(order.id, 'paid', "User marked as paid")
             
             # Auto-confirm if still pending
-            if order.status == 'pending':
+            if order.status == 'pending_payment':
                 print("Auto-confirming order")
-                order.status = 'confirmed'
-                order_repo.add_event(order.id, 'confirmed', "Auto-confirm after mock pay")
+                order.status = 'waiting_admin_confirmation'
+                order_repo.add_event(order.id, 'admin_confirmed', "Auto-confirm after payment")
             
             print("Committing transaction")
             db.session.commit()
@@ -330,6 +349,110 @@ class OrderService:
         })
         
         return response
+    
+    def confirm_bank_transfer(self, order_code: str, user_id: str = None) -> Dict:
+        """Confirm bank transfer by user"""
+        try:
+            if user_id:
+                user_id = str(user_id)
+                order = order_repo.get_by_code_for_user(order_code, user_id)
+            else:
+                order = order_repo.get_by_code(order_code)
+                
+            if not order:
+                raise OrderError(f"Order {order_code} not found")
+            
+            if order.payment_method != 'MOCK_TRANSFER':
+                raise OrderError("Order is not bank transfer payment")
+                
+            if order.transfer_confirmed:
+                return self._format_order_response(order)
+            
+            # Update transfer confirmation
+            order.transfer_confirmed = True
+            order.transfer_confirmed_at = datetime.utcnow()
+            order.payment_status = 'transfer_confirmed'
+            order.status = 'waiting_admin_confirmation'
+            
+            # Add event
+            order_repo.add_event(order.id, 'payment_confirmed', "User confirmed bank transfer")
+            
+            db.session.commit()
+            
+            return self._format_order_response(order)
+            
+        except Exception as e:
+            db.session.rollback()
+            raise OrderError(f"Failed to confirm transfer: {str(e)}")
+    
+    def admin_confirm_order(self, order_code: str) -> Dict:
+        """Admin confirms the order"""
+        try:
+            order = order_repo.get_by_code(order_code)
+            if not order:
+                raise OrderError(f"Order {order_code} not found")
+            
+            if order.status != 'waiting_admin_confirmation':
+                raise OrderError(f"Order status is {order.status}, cannot confirm")
+            
+            order.status = 'shipping'
+            order_repo.add_event(order.id, 'admin_confirmed', "Order confirmed by admin")
+            
+            db.session.commit()
+            
+            return self._format_order_response(order)
+            
+        except Exception as e:
+            db.session.rollback()
+            raise OrderError(f"Failed to confirm order: {str(e)}")
+    
+    def mark_as_delivered(self, order_code: str) -> Dict:
+        """Mark order as delivered (admin function)"""
+        try:
+            order = order_repo.get_by_code(order_code)
+            if not order:
+                raise OrderError(f"Order {order_code} not found")
+            
+            if order.status != 'shipping':
+                raise OrderError(f"Order status is {order.status}, cannot mark as delivered")
+            
+            order.status = 'delivered'
+            order_repo.add_event(order.id, 'delivered', "Order delivered to customer")
+            
+            db.session.commit()
+            
+            return self._format_order_response(order)
+            
+        except Exception as e:
+            db.session.rollback()
+            raise OrderError(f"Failed to mark as delivered: {str(e)}")
+    
+    def user_confirm_received(self, order_code: str, user_id: str) -> Dict:
+        """User confirms they received the order"""
+        try:
+            user_id = str(user_id)
+            order = order_repo.get_by_code_for_user(order_code, user_id)
+            
+            if not order:
+                raise OrderError(f"Order {order_code} not found")
+            
+            if order.status != 'fulfilled':
+                raise OrderError(f"Order status is {order.status}, cannot confirm received")
+            
+            order.status = 'completed'
+            order.payment_status = 'paid'
+            # Also set transfer_confirmed when user confirms receipt
+            order.transfer_confirmed = True
+            order.transfer_confirmed_at = datetime.utcnow()
+            order_repo.add_event(order.id, 'completed', "Order confirmed as received by customer")
+            
+            db.session.commit()
+            
+            return self._format_order_response(order)
+            
+        except Exception as e:
+            db.session.rollback()
+            raise OrderError(f"Failed to confirm received: {str(e)}")
 
 
 # Global instance

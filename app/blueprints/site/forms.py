@@ -50,6 +50,14 @@ class CheckoutForm(FlaskForm):
                                     ('MOCK_TRANSFER', 'Chuyển khoản ngân hàng')
                                 ],
                                 validators=[DataRequired()])
+    
+    # Bank transfer confirmation field
+    transfer_confirmed = BooleanField('Tôi đã chuyển khoản', default=False)
+    
+    def validate_transfer_confirmed(self, field):
+        """Validate that transfer is confirmed for bank transfer payments"""
+        if self.payment_method.data == 'MOCK_TRANSFER' and not field.data:
+            raise ValidationError('Bạn phải xác nhận đã chuyển khoản để hoàn tất đặt hàng')
 
 
 class LoginForm(FlaskForm):

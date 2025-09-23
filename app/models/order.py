@@ -7,28 +7,28 @@ from enum import Enum
 
 class PaymentMethod(Enum):
     COD = 'COD'
-    MOCK_TRANSFER = 'MOCK_TRANSFER'
+    MOCK_TRANSFER = 'MOCK_TRANSFER'  # Match database enum
 
 
 class PaymentStatus(Enum):
     UNPAID = 'unpaid'
-    MOCK_PAID = 'mock_paid'
+    MOCK_PAID = 'mock_paid'  # Match database enum
 
 
 class OrderStatus(Enum):
     PENDING = 'pending'
-    CONFIRMED = 'confirmed'
+    CONFIRMED = 'confirmed' 
     FULFILLED = 'fulfilled'
-    CANCELLED = 'cancelled'
+    CANCELLED = 'cancelled'  # Match database enum
 
 
 class EventType(Enum):
     PLACED = 'placed'
-    MOCK_PAID = 'mock_paid'
+    MOCK_PAID = 'mock_paid'  # Match database enum
     CONFIRMED = 'confirmed'
-    FULFILLED = 'fulfilled'
+    FULFILLED = 'fulfilled' 
     CANCELLED = 'cancelled'
-    RESTOCKED = 'restocked'
+    RESTOCKED = 'restocked'  # Match database enum
 
 
 class Order(db.Model):
@@ -48,7 +48,11 @@ class Order(db.Model):
     
     payment_method = db.Column(db.String(20), default='COD', nullable=False)
     payment_status = db.Column(db.String(20), default='unpaid', nullable=False)
-    status = db.Column(db.String(20), default='pending', nullable=False)
+    status = db.Column(db.String(30), default='pending_payment', nullable=False)
+    
+    # Bank transfer confirmation fields
+    transfer_confirmed = db.Column(db.Boolean, default=False, nullable=False)
+    transfer_confirmed_at = db.Column(db.DateTime, nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     # Note: No updated_at column in database schema

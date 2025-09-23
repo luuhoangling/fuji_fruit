@@ -132,6 +132,42 @@
                         </div>
                         {% endfor %}
                         
+                        <!-- Bank Transfer Information -->
+                        <div id="bank-transfer-info" class="mt-3 p-3 border rounded bg-light" style="display: none;">
+                            <h6><i class="bi bi-bank"></i> Thông tin chuyển khoản</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Số tài khoản:</strong> 0123456789</p>
+                                    <p class="mb-1"><strong>Ngân hàng:</strong> Vietcombank</p>
+                                    <p class="mb-1"><strong>Chi nhánh:</strong> Chi nhánh Thủ Đức</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Chủ tài khoản:</strong> FUJI FRUIT COMPANY</p>
+                                    <p class="mb-1"><strong>Nội dung:</strong> <span id="transfer-content">FJ-XXXXXX</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mt-3">
+                                {{ form.transfer_confirmed(class="form-check-input", id="transfer_confirmed") }}
+                                <label class="form-check-label" for="transfer_confirmed">
+                                    <strong>{{ form.transfer_confirmed.label.text }}</strong>
+                                </label>
+                            </div>
+                            
+                            {% if form.transfer_confirmed.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.transfer_confirmed.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="alert alert-info mt-2 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Lưu ý:</strong> Vui lòng chuyển khoản đúng nội dung để chúng tôi có thể xác nhận đơn hàng nhanh chóng.
+                            </div>
+                        </div>
+                        
                         {% if form.payment_method.errors %}
                             <div class="text-danger">
                                 {% for error in form.payment_method.errors %}
@@ -199,8 +235,8 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle"></i> Đặt hàng
+                            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                                <i class="bi bi-check-circle"></i> <span id="submit-text">Đặt hàng</span>
                             </button>
                             <a href="{{ url_for('site.cart') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left"></i> Quay lại giỏ hàng
@@ -235,6 +271,55 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
+    const bankTransferInfo = document.getElementById('bank-transfer-info');
+    const transferContent = document.getElementById('transfer-content');
+    const transferConfirmed = document.getElementById('transfer_confirmed');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    
+    // Payment method change handler
+    function handlePaymentMethodChange() {
+        const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+        
+        if (selectedPayment && selectedPayment.value === 'MOCK_TRANSFER') {
+            bankTransferInfo.style.display = 'block';
+            // Generate random order code for transfer content
+            const randomCode = 'FJ-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            transferContent.textContent = randomCode;
+            
+            // Update submit button based on transfer confirmation
+            updateSubmitButton();
+        } else {
+            bankTransferInfo.style.display = 'none';
+            submitText.textContent = 'Đặt hàng';
+            submitBtn.disabled = false;
+        }
+    }
+    
+    function updateSubmitButton() {
+        const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+        if (selectedPayment && selectedPayment.value === 'MOCK_TRANSFER') {
+            if (transferConfirmed.checked) {
+                submitText.textContent = 'Xác nhận đặt hàng';
+                submitBtn.disabled = false;
+            } else {
+                submitText.textContent = 'Đặt hàng (Chưa chuyển khoản)';
+                submitBtn.disabled = false; // Allow submission to show validation error
+            }
+        }
+    }
+    
+    // Add event listeners
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', handlePaymentMethodChange);
+    });
+    
+    if (transferConfirmed) {
+        transferConfirmed.addEventListener('change', updateSubmitButton);
+    }
+    
+    // Initial setup
+    handlePaymentMethodChange();
     
     // Check if user is logged in from data attribute
     const isLoggedIn = form.getAttribute('data-logged-in') === 'true';
@@ -280,12 +365,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Special validation for bank transfer
+        const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+        if (selectedPayment && selectedPayment.value === 'MOCK_TRANSFER') {
+            if (!transferConfirmed.checked) {
+                // Allow form to submit to show server-side validation error
+                // The server will handle showing the proper error message
+            }
+        }
+        
         if (!isValid) {
             e.preventDefault();
             alert('Vui lòng điền đầy đủ thông tin bắt buộc');
         }
     });
 });
-</script>
 </script>
 {% endblock %}

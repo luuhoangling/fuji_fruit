@@ -436,7 +436,7 @@ def update_order_status(order_id):
         new_status = data['status']
         
         # Validate status
-        valid_statuses = ['pending', 'confirmed', 'fulfilled', 'cancelled']
+        valid_statuses = ['pending', 'waiting_admin_confirmation', 'confirmed', 'fulfilled', 'cancelled']
         if new_status not in valid_statuses:
             return jsonify({'success': False, 'message': 'Trạng thái không hợp lệ'}), 400
         
@@ -448,8 +448,9 @@ def update_order_status(order_id):
             session_db.commit()
             status_text = {
                 'pending': 'chờ xử lý',
-                'confirmed': 'đã xác nhận', 
-                'fulfilled': 'hoàn thành',
+                'waiting_admin_confirmation': 'chờ xác nhận',
+                'confirmed': 'đã xác nhận',
+                'fulfilled': 'đã hoàn thành',
                 'cancelled': 'đã hủy'
             }
             return jsonify({
@@ -464,3 +465,119 @@ def update_order_status(order_id):
         return jsonify({'success': False, 'message': f'Lỗi hệ thống: {str(e)}'}), 500
     finally:
         close_session(session_db)
+
+
+@admin_bp.route('/orders/<order_code>/confirm', methods=['POST'])
+@csrf.exempt
+@admin_required
+def confirm_order(order_code):
+    """Admin confirms order (moves from pending to confirmed)"""
+    session_db = get_session()
+    try:
+        order = session_db.query(Order).filter_by(order_code=order_code).first()
+        if not order:
+            return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+        
+        if order.status not in ['pending', 'waiting_admin_confirmation']:
+            return jsonify({'success': False, 'error': f'Đơn hàng đang ở trạng thái {order.status}, không thể xác nhận'}), 400
+        
+        # Update order status to confirmed
+        order.status = 'confirmed'
+        session_db.commit()
+        
+        return jsonify({'success': True, 'message': 'Đã xác nhận đơn hàng!'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        close_session(session_db)
+
+
+@admin_bp.route('/orders/<order_code>/mark-fulfilled', methods=['POST'])
+@csrf.exempt
+@admin_required
+def mark_fulfilled(order_code):
+    """Admin marks order as fulfilled (processing completed)"""
+    session_db = get_session()
+    try:
+        order = session_db.query(Order).filter_by(order_code=order_code).first()
+        if not order:
+            return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+        
+        if order.status != 'confirmed':
+            return jsonify({'success': False, 'error': f'Đơn hàng đang ở trạng thái {order.status}, không thể đánh dấu hoàn thành'}), 400
+        
+        # Update order status to fulfilled
+        order.status = 'fulfilled'
+        session_db.commit()
+        
+        return jsonify({'success': True, 'message': 'Đã đánh dấu đơn hàng hoàn thành!'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        close_session(session_db)
+
+# DEPRECATED: Admin mark delivered route - no longer needed
+# Users now confirm receipt directly from fulfilled status
+"""
+@admin_bp.route('/orders/<order_code>/mark-delivered', methods=['POST'])
+@csrf.exempt
+@admin_required
+def mark_delivered(order_code):
+    \"\"\"Admin marks order as delivered\"\"\"
+    session_db = get_session()
+    try:
+        order = session_db.query(Order).filter_by(order_code=order_code).first()
+        if not order:
+            return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+        
+        if order.status != 'fulfilled':
+            return jsonify({'success': False, 'error': f'Đơn hàng đang ở trạng thái {order.status}, không thể đánh dấu đã giao'}), 400
+        
+        # Mark as delivered by setting transfer_confirmed = True
+        from datetime import datetime
+        order.transfer_confirmed = True
+        order.transfer_confirmed_at = datetime.utcnow()
+        session_db.commit()
+        
+        return jsonify({'success': True, 'message': 'Đã đánh dấu đơn hàng đã giao hàng!'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        close_session(session_db)
+"""
+
+
+# DEPRECATED: Admin mark received route - no longer needed  
+# Users now confirm receipt directly from fulfilled status
+"""
+@admin_bp.route('/orders/<order_code>/mark-received', methods=['POST'])
+@admin_bp.route('/orders/<order_code>/mark-received', methods=['POST'])
+@csrf.exempt
+@admin_required
+def mark_received(order_code):
+    \"\"\"Admin marks that customer has received the order\"\"\"
+    session_db = get_session()
+    try:
+        order = session_db.query(Order).filter_by(order_code=order_code).first()
+        if not order:
+            return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+        
+        if order.status != 'fulfilled' or not order.transfer_confirmed:
+            return jsonify({'success': False, 'error': 'Đơn hàng chưa được giao, không thể xác nhận đã nhận'}), 400
+        
+        # For COD orders, mark payment as completed when customer receives
+        if order.payment_method == 'COD':
+            order.payment_status = 'mock_paid'
+        
+        session_db.commit()
+        
+        return jsonify({'success': True, 'message': 'Đã xác nhận khách hàng đã nhận hàng!'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        close_session(session_db)
+"""

@@ -4,6 +4,8 @@
 {% block page_subtitle %}Xem và quản lý đơn hàng{% endblock %}
 
 {% block content %}
+{# Import order helpers for consistent status display #}
+{% from 'admin/_order_helpers.html' import render_order_status, render_payment_status, render_payment_method, render_admin_actions %}
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="input-group">
@@ -40,57 +42,47 @@
                         <th>Mã đơn hàng</th>
                         <th>Khách hàng</th>
                         <th>Số điện thoại</th>
+                        <th>Địa chỉ</th>
                         <th>Tổng tiền</th>
                         <th>Phương thức thanh toán</th>
                         <th>Trạng thái thanh toán</th>
                         <th>Trạng thái đơn hàng</th>
                         <th>Ngày tạo</th>
-                        <th>Thao tác</th>
+                        <th style="min-width: 200px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for order in orders %}
                     <tr>
                         <td>
-                            <strong class="text-primary">{{ order.order_code }}</strong>
+                            <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+                               class="text-decoration-none">
+                                <strong class="text-primary">{{ order.order_code }}</strong>
+                            </a>
                         </td>
                         <td>{{ order.customer_name }}</td>
                         <td>{{ order.phone }}</td>
+                        <td>
+                            <small>
+                                {{ order.address[:30] }}{% if order.address|length > 30 %}...{% endif %}<br>
+                                {% if order.ward %}{{ order.ward }}, {% endif %}
+                                {% if order.district %}{{ order.district }}, {% endif %}
+                                {% if order.province %}{{ order.province }}{% endif %}
+                            </small>
+                        </td>
                         <td>
                             <strong class="text-success">
                                 {{ "{:,.0f}".format(order.grand_total) }} VNĐ
                             </strong>
                         </td>
                         <td>
-                            {% if order.payment_method == 'COD' %}
-                                <span class="badge bg-warning">COD</span>
-                            {% elif order.payment_method == 'MOCK_TRANSFER' %}
-                                <span class="badge bg-info">Chuyển khoản</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ order.payment_method }}</span>
-                            {% endif %}
+                            {{ render_payment_method(order) }}
                         </td>
                         <td>
-                            {% if order.payment_status == 'unpaid' %}
-                                <span class="badge bg-danger">Chưa thanh toán</span>
-                            {% elif order.payment_status == 'mock_paid' %}
-                                <span class="badge bg-success">Đã thanh toán</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ order.payment_status }}</span>
-                            {% endif %}
+                            {{ render_payment_status(order) }}
                         </td>
                         <td>
-                            {% if order.status == 'pending' %}
-                                <span class="badge bg-warning">Chờ xử lý</span>
-                            {% elif order.status == 'confirmed' %}
-                                <span class="badge bg-info">Đã xác nhận</span>
-                            {% elif order.status == 'fulfilled' %}
-                                <span class="badge bg-success">Đã hoàn thành</span>
-                            {% elif order.status == 'cancelled' %}
-                                <span class="badge bg-danger">Đã hủy</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ order.status }}</span>
-                            {% endif %}
+                            {{ render_order_status(order) }}
                         </td>
                         <td>
                             <small class="text-muted">
@@ -98,29 +90,12 @@
                             </small>
                         </td>
                         <td>
-                            <div class="btn-group" role="group">
-                                <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
-                                   class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if order.status in ['pending', 'confirmed'] %}
-                                <button class="btn btn-sm btn-outline-success" 
-                                        onclick="updateOrderStatus({{ order.id }}, 'fulfilled')" 
-                                        title="Hoàn thành đơn hàng">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" 
-                                        onclick="updateOrderStatus({{ order.id }}, 'cancelled')" 
-                                        title="Hủy đơn hàng">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                                {% endif %}
-                            </div>
+                            {{ render_admin_actions(order) }}
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9" class="text-center py-4">
+                        <td colspan="10" class="text-center py-4">
                             <div class="text-muted">
                                 <i class="fas fa-shopping-cart fa-3x mb-3"></i>
                                 <p>Không có đơn hàng nào</p>
@@ -201,7 +176,6 @@ function refreshOrders() {
 
 function updateOrderStatus(orderId, newStatus) {
     const statusText = {
-        'fulfilled': 'hoàn thành',
         'cancelled': 'hủy'
     };
     
@@ -232,6 +206,114 @@ function updateOrderStatus(orderId, newStatus) {
         });
     }
 }
+
+function confirmOrder(orderCode) {
+    if (confirm('Bạn có chắc chắn muốn xác nhận đơn hàng này?')) {
+        fetch(`/admin/orders/${orderCode}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showAlert('error', data.error || 'Có lỗi xảy ra');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Có lỗi xảy ra khi xác nhận đơn hàng');
+        });
+    }
+}
+
+function markFulfilled(orderCode) {
+    if (confirm('Bạn có chắc chắn muốn đánh dấu đơn hàng này đã hoàn thành?')) {
+        fetch(`/admin/orders/${orderCode}/mark-fulfilled`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showAlert('error', data.error || 'Có lỗi xảy ra');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Có lỗi xảy ra khi đánh dấu hoàn thành');
+        });
+    }
+}
+
+// DEPRECATED: markDelivered and markReceived functions - no longer needed
+// Users now confirm receipt directly from fulfilled status
+/*
+function markDelivered(orderCode) {
+    if (confirm('Bạn có chắc chắn muốn đánh dấu đơn hàng này đã giao hàng?')) {
+        fetch(`/admin/orders/${orderCode}/mark-delivered`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showAlert('error', data.error || 'Có lỗi xảy ra');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Có lỗi xảy ra khi đánh dấu đã giao hàng');
+        });
+    }
+}
+
+function markReceived(orderCode) {
+    if (confirm('Xác nhận khách hàng đã nhận hàng? Đơn hàng sẽ được đánh dấu hoàn toàn kết thúc.')) {
+        fetch(`/admin/orders/${orderCode}/mark-received`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showAlert('error', data.error || 'Có lỗi xảy ra');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Có lỗi xảy ra khi xác nhận đã nhận hàng');
+        });
+    }
+}
+*/
 
 function showAlert(type, message) {
     const alertDiv = document.createElement('div');

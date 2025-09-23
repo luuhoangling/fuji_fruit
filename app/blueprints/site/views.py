@@ -11,6 +11,8 @@ from app.repositories.order_repo import OrderRepository
 from app.repositories.review_repo import ReviewRepository
 from app.blueprints.site.forms import ReviewForm, CheckoutForm, LoginForm, RegisterForm
 from app.models.user import User
+from app.models.order import Order
+from app.db import get_session, close_session
 from app.auth import hash_password, check_password
 from sqlalchemy.orm import sessionmaker
 from app.db import get_db_session
@@ -482,6 +484,7 @@ def checkout():
                     'ward': form.ward.data
                 },
                 'payment_method': form.payment_method.data,
+                'transfer_confirmed': form.transfer_confirmed.data if form.payment_method.data == 'MOCK_TRANSFER' else False,
                 'items': [{'product_id': item['product_id'], 'qty': item['qty']} for item in items]
             }
             
@@ -844,3 +847,70 @@ def profile():
         return render_template('site/profile.html', user=user)
     finally:
         db_session.close()
+
+
+@site_bp.route('/orders/<order_code>/confirm-transfer', methods=['POST'])
+@csrf.exempt
+def confirm_transfer(order_code):
+    """User confirms bank transfer payment"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        order_service = OrderService()
+        result = order_service.confirm_bank_transfer(order_code, session['user_id'])
+        return jsonify({'success': True, 'message': 'Đã xác nhận chuyển khoản!', 'order': result})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@site_bp.route('/orders/<order_code>/complete', methods=['POST'])
+@csrf.exempt
+def complete_order(order_code):
+    """User confirms receipt of order"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        order_service = OrderService()
+        result = order_service.complete_order(order_code, session['user_id'])
+        flash('Cảm ơn bạn đã xác nhận nhận hàng!', 'success')
+        return jsonify({'success': True, 'message': 'Đã xác nhận nhận hàng!', 'order': result})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@site_bp.route('/user/orders/<order_code>/confirm-received', methods=['POST'])
+@csrf.exempt
+def confirm_received(order_code):
+    """User confirms receipt of order (new endpoint matching JavaScript)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Bạn cần đăng nhập để thực hiện thao tác này'}), 401
+    
+    session_db = get_session()
+    try:
+        # Get order and verify ownership
+        order = session_db.query(Order).filter_by(order_code=order_code, user_id=str(session['user_id'])).first()
+        if not order:
+            return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập'}), 404
+        
+        # Check if order can be confirmed as received
+        if order.status != 'fulfilled':
+            return jsonify({'success': False, 'error': 'Đơn hàng chưa hoàn thành, không thể xác nhận đã nhận'}), 400
+        
+        # Check if already confirmed
+        if order.payment_method == 'COD' and order.payment_status == 'mock_paid':
+            return jsonify({'success': False, 'error': 'Đơn hàng đã được xác nhận nhận hàng trước đó'}), 400
+        
+        # For COD orders, mark payment as completed when customer receives
+        if order.payment_method == 'COD':
+            order.payment_status = 'mock_paid'
+        
+        session_db.commit()
+        
+        return jsonify({'success': True, 'message': 'Cảm ơn bạn đã xác nhận nhận hàng! Đơn hàng đã hoàn tất.'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        close_session(session_db)
