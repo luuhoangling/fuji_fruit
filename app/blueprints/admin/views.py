@@ -375,7 +375,7 @@ def update_order_status(order_id):
                 'pending': 'chờ xử lý',
                 'waiting_admin_confirmation': 'chờ xác nhận',
                 'confirmed': 'đã xác nhận',
-                'fulfilled': 'đã hoàn thành',
+                'fulfilled': 'đang giao hàng',
                 'cancelled': 'đã hủy'
             }
             return jsonify({
@@ -430,13 +430,13 @@ def mark_fulfilled(order_code):
             return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
         
         if order.status != 'confirmed':
-            return jsonify({'success': False, 'error': f'Đơn hàng đang ở trạng thái {order.status}, không thể đánh dấu hoàn thành'}), 400
+            return jsonify({'success': False, 'error': f'Đơn hàng đang ở trạng thái {order.status}, không thể bắt đầu giao hàng'}), 400
         
         # Update order status to fulfilled
         order.status = 'fulfilled'
         session_db.commit()
         
-        return jsonify({'success': True, 'message': 'Đã đánh dấu đơn hàng hoàn thành!'})
+        return jsonify({'success': True, 'message': 'Đã bắt đầu giao hàng!'})
     except Exception as e:
         session_db.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

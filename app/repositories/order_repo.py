@@ -104,22 +104,8 @@ class OrderRepository(BaseRepository):
         """Get orders by status with pagination"""
         query = self.model.query
         
-        # Handle special status 'completed' for orders that are fully finished
-        if status == 'completed':
-            # Orders that are delivered and customer has confirmed receipt
-            query = query.filter(
-                Order.status == 'fulfilled',
-                Order.transfer_confirmed == True,
-                or_(
-                    # COD orders where customer paid on delivery
-                    (Order.payment_method == 'COD') & (Order.payment_status == 'mock_paid'),
-                    # Transfer orders that are delivered (already paid)
-                    (Order.payment_method == 'MOCK_TRANSFER')
-                )
-            )
-        else:
-            # Regular status filtering
-            query = query.filter_by(status=status)
+        # Regular status filtering
+        query = query.filter_by(status=status)
         
         # User filter for authenticated users
         if user_id:

@@ -8,17 +8,9 @@
     {% elif order.status == 'confirmed' %}
         <span class="badge bg-info">Đã xác nhận</span>
     {% elif order.status == 'fulfilled' %}
-        {% if order.transfer_confirmed %}
-            {% if order.payment_method == 'COD' and order.payment_status == 'mock_paid' %}
-                <span class="badge bg-success">Đã nhận hàng (COD)</span>
-            {% else %}
-                <span class="badge bg-success">Đã giao hàng</span>
-            {% endif %}
-        {% else %}
-            <span class="badge bg-primary">Đã hoàn thành</span>
-        {% endif %}
+        <span class="badge bg-primary">Đang giao hàng</span>
     {% elif order.status == 'completed' %}
-        <span class="badge bg-success">Hoàn thành</span>
+        <span class="badge bg-success">Đã giao hàng</span>
     {% else %}
         <span class="badge bg-secondary">{{ order.status }}</span>
     {% endif %}
@@ -70,8 +62,8 @@
         {% if order.status == 'confirmed' %}
         <button class="btn btn-sm btn-info" 
                 onclick="markFulfilled('{{ order.order_code }}')" 
-                title="Chuyển sang vận chuyển">
-            <i class="fas fa-truck"></i> Vận chuyển
+                title="Bắt đầu giao hàng">
+            <i class="fas fa-truck"></i> Giao hàng
         </button>
         <button class="btn btn-sm btn-danger" 
                 onclick="updateOrderStatus({{ order.id }}, 'cancelled')" 

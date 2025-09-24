@@ -32,6 +32,12 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link {% if current_status == 'waiting_admin_confirmation' %}active{% endif %}" 
+               href="{{ url_for('site.my_orders', status='waiting_admin_confirmation') }}">
+                Chờ xác nhận
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link {% if current_status == 'confirmed' %}active{% endif %}" 
                href="{{ url_for('site.my_orders', status='confirmed') }}">
                 Đã xác nhận
@@ -40,13 +46,13 @@
         <li class="nav-item">
             <a class="nav-link {% if current_status == 'fulfilled' %}active{% endif %}" 
                href="{{ url_for('site.my_orders', status='fulfilled') }}">
-                Đã giao hàng
+                Đang giao hàng
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if current_status == 'completed' %}active{% endif %}" 
                href="{{ url_for('site.my_orders', status='completed') }}">
-                Đã hoàn thành
+                Đã giao hàng
             </a>
         </li>
         <li class="nav-item">
@@ -165,12 +171,14 @@
                     Bạn chưa có đơn hàng nào. Hãy bắt đầu mua sắm!
                 {% elif current_status == 'pending' %}
                     Không có đơn hàng nào đang chờ xử lý.
+                {% elif current_status == 'waiting_admin_confirmation' %}
+                    Không có đơn hàng nào đang chờ xác nhận.
                 {% elif current_status == 'confirmed' %}
                     Không có đơn hàng nào đã được xác nhận.
                 {% elif current_status == 'fulfilled' %}
-                    Không có đơn hàng nào đã được giao.
+                    Không có đơn hàng nào đang giao.
                 {% elif current_status == 'completed' %}
-                    Không có đơn hàng nào đã hoàn thành.
+                    Không có đơn hàng nào đã được giao.
                 {% elif current_status == 'cancelled' %}
                     Không có đơn hàng nào đã bị hủy.
                 {% endif %}

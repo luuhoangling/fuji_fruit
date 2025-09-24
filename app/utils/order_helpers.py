@@ -14,15 +14,17 @@ def get_order_status_display(order):
     if order.status == 'pending':
         return ('Chờ xử lý', 'bg-warning')
     
+    elif order.status == 'waiting_admin_confirmation':
+        return ('Chờ xác nhận', 'bg-warning')
+    
     elif order.status == 'confirmed':
         return ('Đã xác nhận', 'bg-info')
     
     elif order.status == 'fulfilled':
-        # Check if customer has received (for COD orders)
-        if order.payment_method == 'COD' and order.payment_status == 'mock_paid':
-            return ('Đã nhận hàng (COD)', 'bg-success')
-        else:
-            return ('Đã hoàn thành - Chờ khách hàng xác nhận', 'bg-primary')
+        return ('Đang giao hàng', 'bg-primary')
+    
+    elif order.status == 'completed':
+        return ('Đã giao hàng', 'bg-success')
     
     # Fallback
     return (order.status.title(), 'bg-secondary')

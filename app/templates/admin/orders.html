@@ -12,9 +12,10 @@
             <select class="form-select" id="statusFilter" onchange="filterByStatus()">
                 <option value="">Tất cả trạng thái</option>
                 <option value="pending" {{ 'selected' if status == 'pending' }}>Chờ xử lý</option>
+                <option value="waiting_admin_confirmation" {{ 'selected' if status == 'waiting_admin_confirmation' }}>Chờ xác nhận</option>
                 <option value="confirmed" {{ 'selected' if status == 'confirmed' }}>Đã xác nhận</option>
-                <option value="fulfilled" {{ 'selected' if status == 'fulfilled' }}>Đã hoàn thành</option>
-                <option value="completed" {{ 'selected' if status == 'completed' }}>Hoàn thành</option>
+                <option value="fulfilled" {{ 'selected' if status == 'fulfilled' }}>Đang giao hàng</option>
+                <option value="completed" {{ 'selected' if status == 'completed' }}>Đã giao hàng</option>
                 <option value="cancelled" {{ 'selected' if status == 'cancelled' }}>Đã hủy</option>
             </select>
             <button class="btn btn-outline-secondary" type="button" onclick="filterByStatus()">
@@ -226,7 +227,7 @@ function confirmOrder(orderCode) {
 }
 
 function markFulfilled(orderCode) {
-    if (confirm('Bạn có chắc chắn muốn đánh dấu đơn hàng này đã hoàn thành?')) {
+    if (confirm('Bạn có chắc chắn muốn bắt đầu giao hàng cho đơn hàng này?')) {
         fetch(`/admin/orders/${orderCode}/mark-fulfilled`, {
             method: 'POST',
             headers: {
@@ -246,7 +247,7 @@ function markFulfilled(orderCode) {
         })
         .catch(error => {
             console.error('Error:', error);
-            showAlert('error', 'Có lỗi xảy ra khi đánh dấu hoàn thành');
+            showAlert('error', 'Có lỗi xảy ra khi bắt đầu giao hàng');
         });
     }
 }

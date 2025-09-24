@@ -139,6 +139,7 @@
                                 <td>
                                     {% set status_colors = {
                                         'pending': 'warning',
+                                        'waiting_admin_confirmation': 'warning',
                                         'confirmed': 'info', 
                                         'processing': 'primary',
                                         'shipped': 'primary',
@@ -149,11 +150,13 @@
                                     } %}
                                     {% set status_names = {
                                         'pending': 'Chờ xác nhận',
+                                        'waiting_admin_confirmation': 'Chờ xác nhận',
                                         'confirmed': 'Đã xác nhận',
                                         'processing': 'Đang xử lý',
                                         'shipped': 'Đã gửi hàng',
+                                        'fulfilled': 'Đang giao hàng',
                                         'delivered': 'Đã giao hàng',
-                                        'completed': 'Hoàn thành',
+                                        'completed': 'Đã giao hàng',
                                         'cancelled': 'Đã hủy',
                                         'refunded': 'Đã hoàn tiền'
                                     } %}

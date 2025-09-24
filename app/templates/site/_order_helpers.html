@@ -5,17 +5,16 @@
         <span class="badge bg-danger">Đã hủy</span>
     {% elif order.status == 'pending' %}
         <span class="badge bg-warning text-dark">Đang chờ xử lý</span>
+    {% elif order.status == 'waiting_admin_confirmation' %}
+        <span class="badge bg-warning text-dark">Chờ xác nhận</span>
     {% elif order.status == 'confirmed' %}
         <span class="badge bg-info">Đã xác nhận</span>
     {% elif order.status == 'fulfilled' %}
-        {# Kiểm tra trạng thái thanh toán để hiển thị chính xác #}
-        {% if order.payment_status == 'mock_paid' %}
-            <span class="badge bg-success">Đã hoàn thành</span>
-        {% elif order.payment_method == 'MOCK_TRANSFER' and order.transfer_confirmed %}
-            <span class="badge bg-success">Đã hoàn thành</span>
-        {% else %}
-            <span class="badge bg-primary">Đã hoàn thành - Chờ xác nhận nhận hàng</span>
-        {% endif %}
+        {# Đơn hàng đang được giao, chờ khách hàng xác nhận #}
+        <span class="badge bg-primary">Đang giao hàng</span>
+    {% elif order.status == 'completed' %}
+        {# Khách hàng đã xác nhận nhận hàng #}
+        <span class="badge bg-success">Đã giao hàng</span>
     {% else %}
         <span class="badge bg-secondary">{{ order.status }}</span>
     {% endif %}
@@ -69,8 +68,8 @@
             </a>
         {% endif %}
         
-        {# User can confirm receipt for delivered orders that haven't been marked as completed yet #}
-        {% if order.status == 'fulfilled' and order.payment_status != 'mock_paid' %}
+        {# User can confirm receipt for orders being delivered #}
+        {% if order.status == 'fulfilled' %}
             <button type="button" class="btn btn-outline-success btn-sm" 
                     onclick="confirmReceived('{{ order.order_code }}')">
                 <i class="bi bi-check-circle"></i> Đã nhận hàng
