@@ -1,262 +1,363 @@
-# Fuji Store - E-commerce Website
+# 🍓 Fuji Fruit - E-commerce Website
 
-Dự án website thương mại điện tử được phát triển theo tài liệu hướng dẫn Fuji_Student_Functions.md
+[![Flask](https://img.shields.io/badge/Flask-2.3.3-blue.svg)](https://flask.palletsprojects.com/)
+[![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.0-purple.svg)](https://getbootstrap.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange.svg)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-Educational-yellow.svg)](LICENSE)
 
-## Mô tả dự án
+> 🌟 **Fuji Fruit** - Hệ thống thương mại điện tử chuyên bán trái cây tươi ngon, được xây dựng với Flask và MySQL.
 
-Fuji Store là một website bán hàng trực tuyến đầy đủ tính năng với:
-- Hệ thống đăng ký/đăng nhập người dùng
-- Danh mục sản phẩm và tìm kiếm
-- Giỏ hàng và thanh toán (COD)
-- Quản lý đơn hàng
-- Interface quản trị viên
-- Responsive design với Bootstrap 5
+## 📖 Mô tả dự án
 
-## Công nghệ sử dụng
+**Fuji Fruit Store** là một ứng dụng web thương mại điện tử đầy đủ tính năng, được phát triển với Flask framework. Hệ thống cung cấp trải nghiệm mua sắm trực tuyến hoàn chỉnh từ duyệt sản phẩm đến thanh toán và quản lý đơn hàng.
 
-### Backend
-- **Flask 2.3.3** - Web framework
-- **SQLAlchemy** - ORM với automap cho database
-- **PyMySQL** - MySQL database connector
-- **Flask-JWT-Extended** - JWT authentication
-- **bcrypt** - Password hashing
-- **Werkzeug** - WSGI utilities
+### ✨ Tính năng nổi bật
 
-### Frontend
-- **Bootstrap 5** - CSS framework
-- **JavaScript ES6** - Client-side scripting
-- **Bootstrap Icons** - Icon library
+- 🔐 **Hệ thống xác thực người dùng** - Đăng ký, đăng nhập với JWT
+- 🛍️ **Quản lý sản phẩm** - Danh mục, tìm kiếm, lọc thông minh
+- 🛒 **Giỏ hàng thông minh** - Session-based cho khách vãng lai
+- 💰 **Thanh toán COD** - Thanh toán khi nhận hàng
+- 📊 **Admin Dashboard** - Quản lý sản phẩm, đơn hàng, người dùng  
+- 📱 **Responsive Design** - Tương thích mọi thiết bị
+- 🔒 **Bảo mật cao** - Hash password, JWT tokens, CSRF protection
 
-### Database
-- **MySQL/MariaDB** - Database server
-- **fuji.sql** - Database schema
+## 🛠️ Công nghệ sử dụng
 
-## Cấu trúc dự án
+### Backend Stack
+- **[Flask 2.3.3](https://flask.palletsprojects.com/)** - Web framework chính
+- **[SQLAlchemy 2.0.23](https://www.sqlalchemy.org/)** - ORM với automap models
+- **[PyMySQL 1.1.0](https://pypi.org/project/PyMySQL/)** - MySQL database connector
+- **[Flask-JWT-Extended 4.5.3](https://flask-jwt-extended.readthedocs.io/)** - JWT authentication
+- **[bcrypt 4.0.1](https://pypi.org/project/bcrypt/)** - Password hashing
+- **[Flask-Limiter 3.5.0](https://flask-limiter.readthedocs.io/)** - Rate limiting
+- **[Marshmallow 3.21.3](https://marshmallow.readthedocs.io/)** - Serialization/validation
+
+### Frontend Stack  
+- **[Bootstrap 5.3.0](https://getbootstrap.com/)** - CSS framework
+- **[Bootstrap Icons](https://icons.getbootstrap.com/)** - Icon library
+- **[Font Awesome 6.0](https://fontawesome.com/)** - Additional icons
+- **JavaScript ES6** - Client-side interactions
+
+### Database & DevOps
+- **[MySQL 8.0+](https://www.mysql.com/)** - Primary database
+- **[Gunicorn 21.2.0](https://gunicorn.org/)** - WSGI HTTP Server
+- **[Flask-Migrate 4.0.5](https://flask-migrate.readthedocs.io/)** - Database migrations
+
+## 📁 Cấu trúc Project
 
 ```
 fuji_app/
-├── app/
-│   ├── __init__.py           # Flask app factory
-│   ├── db.py                 # Database configuration
-│   ├── models.py             # SQLAlchemy automap models
-│   ├── auth.py               # Authentication utilities
-│   └── blueprints/
-│       ├── api/              # API endpoints
-│       │   ├── __init__.py
-│       │   ├── routes.py     # Main API routes
-│       │   ├── auth_routes.py
-│       │   ├── catalog_routes.py
-│       │   ├── cart_routes.py
-│       │   ├── order_routes.py
-│       │   └── admin_routes.py
-│       └── public/           # Public web pages
-│           ├── __init__.py
-│           ├── routes.py
-│           └── templates/
-│               ├── base.html
-│               ├── index.html
-│               ├── products.html
-│               └── stores.html
-├── static/
-│   ├── css/
-│   │   └── style.css
-│   └── images/
-├── config.py                 # App configuration
-├── requirements.txt          # Python dependencies
-├── wsgi.py                   # WSGI entry point
-├── .env                      # Environment variables
-├── fuji.sql                  # Database schema
-└── README.md                 # This file
+├── 📁 app/                           # Ứng dụng chính
+│   ├── __init__.py                   # Flask app factory  
+│   ├── auth.py                       # Authentication utilities
+│   ├── db.py                         # Database configuration
+│   ├── extensions.py                 # Flask extensions
+│   ├── 📁 api/                       # REST API endpoints
+│   │   ├── __init__.py
+│   │   ├── auth.py                   # Auth API routes
+│   │   ├── errors.py                 # Error handlers
+│   │   └── public.py                 # Public API routes
+│   ├── 📁 blueprints/                # Web interface blueprints
+│   │   ├── 📁 admin/                 # Admin dashboard
+│   │   │   ├── __init__.py
+│   │   │   └── views.py
+│   │   └── 📁 site/                  # Public website
+│   │       ├── __init__.py
+│   │       ├── forms.py              # WTForms
+│   │       └── views.py
+│   ├── 📁 models/                    # Database models
+│   │   ├── __init__.py
+│   │   ├── category.py
+│   │   ├── order.py
+│   │   ├── product.py
+│   │   ├── review.py
+│   │   └── user.py
+│   ├── 📁 repositories/              # Data access layer
+│   │   ├── category_repo.py
+│   │   ├── order_repo.py
+│   │   └── product_repo.py
+│   ├── 📁 schemas/                   # Marshmallow schemas
+│   │   ├── category.py
+│   │   ├── order.py
+│   │   └── product.py
+│   ├── 📁 services/                  # Business logic
+│   │   ├── order_service.py
+│   │   ├── pricing_service.py
+│   │   └── stock_service.py
+│   ├── 📁 static/                    # Static assets
+│   │   ├── css/custom.css
+│   │   └── js/
+│   ├── 📁 templates/                 # Jinja2 templates
+│   │   ├── base.html
+│   │   ├── 404.html
+│   │   ├── 📁 admin/                 # Admin templates
+│   │   ├── 📁 site/                  # Public templates
+│   │   └── 📁 _partials/             # Template partials
+│   └── 📁 utils/                     # Utility functions
+│       ├── avatar_utils.py
+│       ├── pagination.py
+│       └── slugs.py
+├── config.py                         # App configuration
+├── init_db.py                        # Database initialization
+├── manage.py                         # Management commands
+├── requirements.txt                  # Python dependencies
+├── wsgi.py                          # WSGI entry point
+├── .env                             # Environment variables
+└── README.md                        # Documentation
 ```
 
-## Cài đặt và chạy
+## 🚀 Cài đặt và Triển khai
 
-### 1. Chuẩn bị môi trường
+### 📋 Yêu cầu hệ thống
+
+- **Python**: 3.8+ 
+- **MySQL**: 8.0+ hoặc MariaDB 10.4+
+- **Node.js**: 16+ (tùy chọn, cho dev tools)
+
+### 1️⃣ Clone Repository
+
+```bash
+git clone https://github.com/your-username/fuji-fruit.git
+cd fuji-fruit
+```
+
+### 2️⃣ Thiết lập Python Environment
 
 ```bash
 # Tạo virtual environment
-python -m venv venv
+python -m venv .venv
 
 # Kích hoạt virtual environment
 # Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
+.venv\Scripts\activate
+# Linux/Mac/Git Bash
+source .venv/bin/activate
+
+# Upgrade pip
+python -m pip install --upgrade pip
 
 # Cài đặt dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Cấu hình database
+### 3️⃣ Cấu hình Database
 
+**Tạo database MySQL:**
+```sql
+CREATE DATABASE fuji CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'fuji_user'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON fuji.* TO 'fuji_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+**Khởi tạo database:**
 ```bash
-# Khởi động MySQL/MariaDB server
-# Import database schema
-mysql -u root -p < fuji.sql
+# Sử dụng script khởi tạo
+python init_db.py
+
+# Hoặc với Flask CLI
+flask db upgrade
 ```
 
-### 3. Cấu hình môi trường
+### 4️⃣ Cấu hình Environment
 
-Tạo file `.env` (đã có sẵn):
+Sao chép và điều chỉnh file môi trường:
+```bash
+cp .env.example .env
 ```
-FLASK_APP=wsgi.py
+
+Chỉnh sửa file `.env`:
+```env
+# Flask Configuration
 FLASK_ENV=development
-FLASK_DEBUG=True
-DATABASE_URL=mysql+pymysql://root:@localhost/fuji_db
-JWT_SECRET_KEY=your-super-secret-jwt-key-here
-JWT_ACCESS_TOKEN_EXPIRES=86400
+FLASK_DEBUG=1
+SECRET_KEY=your-super-secret-key-here
+
+# Database Configuration
+DATABASE_URL=mysql+pymysql://fuji_user:your_password@localhost:3306/fuji?charset=utf8mb4
+
+# JWT Configuration  
+JWT_SECRET_KEY=your-jwt-secret-key-here
+JWT_ACCESS_TOKEN_EXPIRES=3600
+
+# Optional: Redis for rate limiting
+# REDIS_URL=redis://localhost:6379/0
 ```
 
-### 4. Chạy ứng dụng
+### 5️⃣ Chạy ứng dụng
 
+**Development Mode:**
 ```bash
-# Development server
+# Với Flask CLI
 flask run
 
 # Hoặc với Python
 python wsgi.py
+
+# Với management script
+python manage.py
 ```
 
-Ứng dụng sẽ chạy tại: http://localhost:5000
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Đăng ký người dùng
-- `POST /api/auth/login` - Đăng nhập
-- `POST /api/auth/logout` - Đăng xuất
-- `GET /api/auth/profile` - Thông tin người dùng
-- `PUT /api/auth/profile` - Cập nhật thông tin
-
-### Products & Catalog
-- `GET /api/products` - Danh sách sản phẩm (có filter, search)
-- `GET /api/products/<slug>` - Chi tiết sản phẩm
-- `GET /api/categories` - Danh sách danh mục
-- `GET /api/brands` - Danh sách thương hiệu
-
-### Shopping Cart
-- `GET /api/cart` - Xem giỏ hàng
-- `POST /api/cart/items` - Thêm sản phẩm vào giỏ
-- `PUT /api/cart/items/<item_id>` - Cập nhật số lượng
-- `DELETE /api/cart/items/<item_id>` - Xóa sản phẩm
-
-### Orders
-- `POST /api/orders` - Tạo đơn hàng
-- `GET /api/orders` - Danh sách đơn hàng
-- `GET /api/orders/<order_id>` - Chi tiết đơn hàng
-
-### Stores
-- `GET /api/stores` - Danh sách cửa hàng
-- `GET /api/stores/<store_id>` - Chi tiết cửa hàng
-- `GET /api/stores/provinces` - Danh sách tỉnh/thành
-
-### Admin (yêu cầu quyền admin)
-- `GET /api/admin/users` - Quản lý người dùng
-- `POST /api/admin/products` - Tạo sản phẩm
-- `PUT /api/admin/products/<id>` - Cập nhật sản phẩm
-- `DELETE /api/admin/products/<id>` - Xóa sản phẩm
-- `GET /api/admin/orders` - Quản lý đơn hàng
-- `PUT /api/admin/orders/<id>/status` - Cập nhật trạng thái đơn hàng
-
-## Tính năng chính
-
-### Người dùng
-1. **Đăng ký/Đăng nhập**: Hệ thống authentication với JWT
-2. **Duyệt sản phẩm**: Xem danh sách, tìm kiếm, lọc theo danh mục/thương hiệu
-3. **Giỏ hàng**: Thêm/xóa/cập nhật sản phẩm
-4. **Đặt hàng**: Thanh toán COD (Cash on Delivery)
-5. **Quản lý đơn hàng**: Theo dõi trạng thái đơn hàng
-
-### Khách vãng lai
-1. **Duyệt sản phẩm**: Xem toàn bộ catalog
-2. **Giỏ hàng phiên**: Giỏ hàng lưu trong session
-3. **Đặt hàng**: Có thể đặt hàng mà không cần đăng ký
-
-### Admin
-1. **Quản lý sản phẩm**: CRUD operations
-2. **Quản lý đơn hàng**: Cập nhật trạng thái, xem chi tiết
-3. **Quản lý người dùng**: Xem danh sách, cập nhật thông tin
-
-## Database Schema
-
-Database được thiết kế với các bảng chính:
-- `users` - Thông tin người dùng
-- `products` - Sản phẩm
-- `product_variants` - Biến thể sản phẩm
-- `categories` - Danh mục
-- `brands` - Thương hiệu
-- `orders` - Đơn hàng
-- `order_items` - Chi tiết đơn hàng
-- `cart_items` - Giỏ hàng
-- `stores` - Cửa hàng
-
-## Bảo mật
-
-- **Password hashing**: Sử dụng bcrypt
-- **JWT Authentication**: Token-based authentication
-- **Input validation**: Kiểm tra dữ liệu đầu vào
-- **Session management**: Quản lý phiên cho khách vãng lai
-
-## Responsive Design
-
-Website được thiết kế responsive với Bootstrap 5:
-- Mobile-first approach
-- Tương thích với tất cả thiết bị
-- Interface thân thiện người dùng
-
-## Deployment
-
-### Production Setup
-1. Cấu hình production database
-2. Set FLASK_ENV=production
-3. Cấu hình reverse proxy (nginx)
-4. Sử dụng WSGI server (gunicorn, uWSGI)
-
-### Docker (Optional)
-```dockerfile
-FROM python:3.10-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 5000
-CMD ["python", "wsgi.py"]
-```
-
-## Troubleshooting
-
-### Common Issues
-1. **Database connection error**: Kiểm tra MySQL server và cấu hình DATABASE_URL
-2. **Import error**: Đảm bảo đã cài đặt tất cả dependencies
-3. **Template not found**: Kiểm tra đường dẫn templates
-4. **API errors**: Kiểm tra JWT token và permissions
-
-### Debug Mode
+**Production Mode:**
 ```bash
-export FLASK_DEBUG=True
-flask run
+# Với Gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
 ```
 
-## Contributing
+🌐 **Ứng dụng sẽ chạy tại:** http://localhost:5000
 
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
+### 6️⃣ Tài khoản Admin mặc định
 
-## License
+```
+Username: admin
+Password: 666666
+```
 
-Dự án này được phát triển cho mục đích học tập.
+## 📚 API Documentation
 
-## Support
+### 🔐 Authentication Endpoints
 
-Liên hệ hỗ trợ qua:
-- Email: support@fujistore.com
-- Hotline: 1900-xxxx
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/v1/auth/register` | Đăng ký tài khoản mới | ❌ |
+| `POST` | `/api/v1/auth/login` | Đăng nhập người dùng | ❌ |
+| `POST` | `/api/v1/auth/logout` | Đăng xuất | ✅ |
+| `GET` | `/api/v1/auth/profile` | Thông tin người dùng | ✅ |
+| `PUT` | `/api/v1/auth/profile` | Cập nhật thông tin | ✅ |
 
----
+### 🛍️ Products & Catalog
 
-**Phát triển bởi**: Sinh viên theo hướng dẫn Fuji_Student_Functions.md
-**Phiên bản**: 1.0.0
-**Ngày cập nhật**: 2024
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/products` | Danh sách sản phẩm + filter/search | ❌ |
+| `GET` | `/api/v1/products/{slug}` | Chi tiết sản phẩm | ❌ |
+| `GET` | `/api/v1/categories` | Danh sách danh mục | ❌ |
+| `GET` | `/api/v1/brands` | Danh sách thương hiệu | ❌ |
+
+### 🛒 Shopping Cart
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/cart` | Xem giỏ hàng | ❌ (Session) |
+| `POST` | `/api/v1/cart/items` | Thêm sản phẩm | ❌ |
+| `PUT` | `/api/v1/cart/items/{id}` | Cập nhật số lượng | ❌ |
+| `DELETE` | `/api/v1/cart/items/{id}` | Xóa sản phẩm | ❌ |
+
+### 📦 Orders Management
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/api/v1/orders` | Tạo đơn hàng mới | ❌ |
+| `GET` | `/api/v1/orders` | Danh sách đơn hàng | ✅ |
+| `GET` | `/api/v1/orders/{id}` | Chi tiết đơn hàng | ✅ |
+
+### 🏪 Stores & Locations
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/stores` | Danh sách cửa hàng | ❌ |
+| `GET` | `/api/v1/stores/{id}` | Chi tiết cửa hàng | ❌ |
+| `GET` | `/api/v1/stores/provinces` | Danh sách tỉnh/thành | ❌ |
+
+### 👨‍💼 Admin Endpoints (Requires Admin Role)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/admin/users` | Quản lý người dùng |
+| `POST` | `/api/v1/admin/products` | Tạo sản phẩm mới |
+| `PUT` | `/api/v1/admin/products/{id}` | Cập nhật sản phẩm |
+| `DELETE` | `/api/v1/admin/products/{id}` | Xóa sản phẩm |
+| `GET` | `/api/v1/admin/orders` | Quản lý đơn hàng |
+| `PUT` | `/api/v1/admin/orders/{id}/status` | Cập nhật trạng thái |
+
+### 🔍 API Response Format
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation completed successfully"
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Error description",
+    "details": { ... }
+  }
+}
+```
+
+## ⭐ Tính năng chính
+
+### 👤 Người dùng đã đăng ký
+- ✅ **Hệ thống xác thực**: Đăng ký/đăng nhập với JWT tokens
+- 🔍 **Tìm kiếm thông minh**: Lọc theo danh mục, thương hiệu, giá
+- 🛒 **Giỏ hàng cá nhân**: Lưu trữ persistent, đồng bộ thiết bị
+- 💳 **Thanh toán COD**: Thanh toán khi nhận hàng
+- 📋 **Quản lý đơn hàng**: Theo dõi trạng thái, lịch sử mua hàng
+- 👨‍💼 **Hồ sơ cá nhân**: Cập nhật thông tin, đổi mật khẩu
+
+### 🚶‍♂️ Khách vãng lai
+- 🌐 **Duyệt sản phẩm**: Xem toàn bộ catalog không cần đăng ký
+- 🛍️ **Giỏ hàng session**: Lưu tạm trong phiên làm việc
+- 📦 **Đặt hàng nhanh**: Checkout mà không cần tạo tài khoản
+- 🔄 **Chuyển đổi dễ dàng**: Có thể đăng ký bất cứ lúc nào
+
+### 👨‍💻 Quản trị viên
+- 📊 **Dashboard tổng quan**: Thống kê bán hàng, đơn hàng
+- 🏷️ **Quản lý sản phẩm**: CRUD operations, quản lý danh mục
+- 📦 **Quản lý đơn hàng**: Cập nhật trạng thái, xử lý đơn hàng
+- 👥 **Quản lý người dùng**: Xem thông tin, phân quyền
+- 📈 **Báo cáo**: Doanh thu, sản phẩm bán chạy
+
+## 🗄️ Database Schema
+
+### Cấu trúc Database
+Database được thiết kế với kiến trúc **SQLAlchemy Automap** để tự động ánh xạ từ schema có sẵn:
+
+| Bảng | Mô tả | Quan hệ |
+|------|-------|---------|
+| `users` | Thông tin người dùng, authentication | 1-N với orders |
+| `products` | Sản phẩm chính | N-M với categories |
+| `product_stock` | Quản lý tồn kho | 1-1 với products |
+| `categories` | Danh mục sản phẩm | N-M với products |
+| `orders` | Đơn hàng | 1-N với order_items |
+| `order_items` | Chi tiết đơn hàng | N-1 với orders |
+| `cart_items` | Giỏ hàng | N-1 với users |
+| `reviews` | Đánh giá sản phẩm | N-1 với products |
+
+### 🔐 Bảo mật
+
+| Tính năng | Công nghệ | Mô tả |
+|-----------|-----------|-------|
+| **Password Hashing** | bcrypt 4.0.1 | Hash password với salt |
+| **JWT Authentication** | Flask-JWT-Extended | Token-based auth |
+| **CSRF Protection** | Flask-WTF | Chống cross-site request forgery |
+| **Rate Limiting** | Flask-Limiter | Giới hạn request để chống spam |
+| **Input Validation** | Marshmallow | Validate dữ liệu đầu vào |
+| **Session Security** | Flask Sessions | Secure session cho guest users |
+
+### 📱 Responsive Design
+
+- ✅ **Mobile-First**: Thiết kế ưu tiên mobile
+- ✅ **Bootstrap 5.3**: Framework CSS hiện đại  
+- ✅ **Cross-Browser**: Tương thích mọi trình duyệt
+- ✅ **Performance**: Tối ưu tốc độ tải trang
+- ✅ **Accessibility**: Hỗ trợ người khuyết tật
+
+<div align="center">
+
+**Phát triển với ❤️ Linh đẹp trai vcl**
+
+⭐ **Đừng quên star repo nếu project hữu ích!** ⭐
+
+**Version**: 2.0.0 | **Updated**: September 2025
+
+</div>
